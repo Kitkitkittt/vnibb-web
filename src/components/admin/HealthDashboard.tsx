@@ -11,6 +11,12 @@ interface HealthData {
   components: Record<string, { status: string; [key: string]: unknown }>;
 }
 
+function StatusIcon({ status }: { status: string }) {
+  if (status === 'healthy') return <CheckCircle className="w-5 h-5 text-green-400" />;
+  if (status === 'unhealthy') return <XCircle className="w-5 h-5 text-red-400" />;
+  return <AlertCircle className="w-5 h-5 text-yellow-400" />;
+}
+
 export function HealthDashboard() {
   const [health, setHealth] = useState<HealthData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -38,11 +44,6 @@ export function HealthDashboard() {
     return () => clearInterval(interval);
   }, []);
 
-  const StatusIcon = ({ status }: { status: string }) => {
-    if (status === 'healthy') return <CheckCircle className="w-5 h-5 text-green-400" />;
-    if (status === 'unhealthy') return <XCircle className="w-5 h-5 text-red-400" />;
-    return <AlertCircle className="w-5 h-5 text-yellow-400" />;
-  };
 
   const statusColor = health?.status === 'healthy' ? 'green' : health?.status === 'degraded' ? 'yellow' : 'red';
 

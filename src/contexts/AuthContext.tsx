@@ -7,7 +7,7 @@
 
 "use client";
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useSyncExternalStore } from 'react';
 import { User, Session, AuthError } from '@supabase/supabase-js';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 
@@ -50,35 +50,47 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const subscribeToHydration = () => () => {};
+const clientSnapshot = () => true;
+const serverSnapshot = () => false;
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [session, setSession] = useState<Session | null>(null);
     const [loading, setLoading] = useState(true);
     const [isDevMode, setIsDevMode] = useState(false);
+    const [initialization, setInitialization] = useState<{
+        devMode: boolean;
+        invalidDevUser: boolean;
+    } | null>(null);
+    const hydrated = useSyncExternalStore(subscribeToHydration, clientSnapshot, serverSnapshot);
+
+    // Match the server's loading state during hydration, then initialize once before commit.
+    if (hydrated && initialization === null) {
+        const devUser = localStorage.getItem('vnibb_dev_user');
+        let devMode = false;
+        let invalidDevUser = false;
+        if (devUser) {
+            try {
+                setUser(JSON.parse(devUser) as User);
+                setIsDevMode(true);
+                devMode = true;
+            } catch {
+                invalidDevUser = true;
+            }
+        }
+        if (devMode || !supabase || !isSupabaseConfigured) setLoading(false);
+        setInitialization({ devMode, invalidDevUser });
+    }
 
     // Derived state
     const isAdmin = user?.user_metadata?.role === 'admin';
     const isGuest = user?.user_metadata?.role === 'guest';
 
     useEffect(() => {
-        // Check for dev mode (admin/guest sessions in localStorage)
-        const devUser = localStorage.getItem('vnibb_dev_user');
-        if (devUser) {
-            try {
-                const parsed = JSON.parse(devUser);
-                setUser(parsed as User);
-                setIsDevMode(true);
-                setLoading(false);
-                return;
-            } catch {
-                localStorage.removeItem('vnibb_dev_user');
-            }
-        }
-
-        if (!supabase || !isSupabaseConfigured) {
-            setLoading(false);
-            return;
-        }
+        if (!initialization) return;
+        if (initialization.invalidDevUser) localStorage.removeItem('vnibb_dev_user');
+        if (initialization.devMode || !supabase || !isSupabaseConfigured) return;
 
         // Get initial session
         supabase.auth.getSession().then(({ data: { session } }) => {
@@ -97,7 +109,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
 
         return () => subscription.unsubscribe();
-    }, []);
+    }, [initialization]);
 
     const signIn = async (email: string, password: string) => {
         if (!supabase) {

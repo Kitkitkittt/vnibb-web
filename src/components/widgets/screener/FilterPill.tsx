@@ -3,17 +3,18 @@
 import { useState, useRef, useEffect } from 'react';
 import { ChevronDown, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import type { ScreenerFilterValue } from '@/types/screener';
 
 interface FilterPreset {
   label: string;
-  value: any;
+  value: ScreenerFilterValue;
 }
 
 interface FilterPillProps {
   label: string;
   value: string | null;
   presets: FilterPreset[];
-  onSelect: (value: any) => void;
+  onSelect: (value: ScreenerFilterValue) => void;
   onRemove: () => void;
 }
 

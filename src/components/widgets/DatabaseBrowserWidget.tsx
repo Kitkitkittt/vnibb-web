@@ -22,6 +22,24 @@ interface TableInfo {
     freshness: "fresh" | "recent" | "stale" | "unknown";
 }
 
+type DatabaseRow = Record<string, unknown>;
+
+interface TableSample {
+    rows: DatabaseRow[];
+    total: number;
+    has_more: boolean;
+}
+
+interface TableSchema {
+    columns: {
+        name: string;
+        type: string;
+        nullable: boolean;
+        default: unknown;
+        primary_key: boolean;
+    }[];
+}
+
 interface DatabaseBrowserWidgetProps {
     config?: {
         defaultTable?: string;
@@ -35,7 +53,7 @@ export function DatabaseBrowserWidget({ config }: DatabaseBrowserWidgetProps) {
     const [debouncedSearch, setDebouncedSearch] = useState("");
     const [limit] = useState(50);
     const [sqlQuery, setSqlQuery] = useState("SELECT * FROM stocks LIMIT 10");
-    const [selectedRow, setSelectedRow] = useState<any>(null);
+    const [selectedRow, setSelectedRow] = useState<DatabaseRow | null>(null);
     const [activeTab, setActiveTab] = useState("browser");
     
     const queryClient = useQueryClient();
@@ -46,15 +64,16 @@ export function DatabaseBrowserWidget({ config }: DatabaseBrowserWidgetProps) {
         return () => clearTimeout(timer);
     }, [search]);
 
-    // Reset page when table or search changes
-    useEffect(() => {
+    const [previousPageSource, setPreviousPageSource] = useState({ selectedTable, debouncedSearch });
+    if (previousPageSource.selectedTable !== selectedTable || previousPageSource.debouncedSearch !== debouncedSearch) {
+        setPreviousPageSource({ selectedTable, debouncedSearch });
         setPage(1);
-    }, [selectedTable, debouncedSearch]);
+    }
 
     // Fetch all tables with stats
     const { data: tablesData, isLoading: tablesLoading } = useQuery({
         queryKey: ["database-tables"],
-        queryFn: async () => {
+        queryFn: async (): Promise<{ tables: TableInfo[] }> => {
             const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/admin/database/tables`);
             if (!res.ok) throw new Error("Failed to fetch tables");
             return res.json();
@@ -64,10 +83,14 @@ export function DatabaseBrowserWidget({ config }: DatabaseBrowserWidgetProps) {
 
     const tables: TableInfo[] = tablesData?.tables || [];
 
+    if (tables.length > 0 && !selectedTable) {
+        setSelectedTable(tables[0].name);
+    }
+
     // Fetch table data
     const { data: tableData, isLoading: tableLoading } = useQuery({
         queryKey: ["database-table-data", selectedTable, page, debouncedSearch],
-        queryFn: async () => {
+        queryFn: async (): Promise<TableSample | null> => {
             if (!selectedTable) return null;
             const offset = (page - 1) * limit;
             let url = `${process.env.NEXT_PUBLIC_API_URL}/api/v1/admin/database/table/${selectedTable}/sample?limit=${limit}&offset=${offset}`;
@@ -83,7 +106,7 @@ export function DatabaseBrowserWidget({ config }: DatabaseBrowserWidgetProps) {
     // Fetch table schema
     const { data: schemaData, isLoading: schemaLoading } = useQuery({
         queryKey: ["database-table-schema", selectedTable],
-        queryFn: async () => {
+        queryFn: async (): Promise<TableSchema | null> => {
             if (!selectedTable) return null;
             const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/admin/database/table/${selectedTable}/schema`);
             if (!res.ok) throw new Error("Failed to fetch schema");
@@ -94,7 +117,7 @@ export function DatabaseBrowserWidget({ config }: DatabaseBrowserWidgetProps) {
 
     // Execute Custom Query
     const queryMutation = useMutation({
-        mutationFn: async (query: string) => {
+        mutationFn: async (query: string): Promise<{ rows: DatabaseRow[] }> => {
             const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/admin/database/query`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -108,12 +131,6 @@ export function DatabaseBrowserWidget({ config }: DatabaseBrowserWidgetProps) {
         }
     });
 
-    // Set default table
-    useEffect(() => {
-        if (tables && tables.length > 0 && !selectedTable) {
-            setSelectedTable(tables[0].name);
-        }
-    }, [tables, selectedTable]);
 
     const handleExport = (format: 'csv' | 'json') => {
         if (!tableData?.rows) return;
@@ -127,7 +144,7 @@ export function DatabaseBrowserWidget({ config }: DatabaseBrowserWidgetProps) {
             filename += '.json';
         } else {
             const headers = Object.keys(data[0]).join(',');
-            const rows = data.map((row: any) => 
+            const rows = data.map(row =>
                 Object.values(row).map(val => `"${String(val ?? '').replace(/"/g, '""')}"`).join(',')
             ).join('\n');
             blob = new Blob([`${headers}\n${rows}`], { type: 'text/csv' });
@@ -215,7 +232,7 @@ export function DatabaseBrowserWidget({ config }: DatabaseBrowserWidgetProps) {
                                 <div className="flex items-center justify-center h-full">
                                     <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
                                 </div>
-                            ) : tableData?.rows?.length > 0 ? (
+                            ) : tableData && tableData.rows.length > 0 ? (
                                 <Table>
                                     <TableHeader className="bg-muted/30">
                                         <TableRow className="hover:bg-transparent border-white/5">
@@ -227,13 +244,13 @@ export function DatabaseBrowserWidget({ config }: DatabaseBrowserWidgetProps) {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {tableData.rows.map((row: any, i: number) => (
+                                        {tableData.rows.map((row, i) => (
                                             <TableRow 
                                                 key={i} 
                                                 className="border-white/5 hover:bg-white/5 cursor-pointer transition-colors"
                                                 onClick={() => setSelectedRow(row)}
                                             >
-                                                {Object.values(row).map((val: any, j: number) => (
+                                                {Object.values(row).map((val, j) => (
                                                     <TableCell key={j} className="text-[10px] py-2 truncate max-w-[150px] font-mono text-muted-foreground">
                                                         {String(val ?? "-")}
                                                     </TableCell>
@@ -321,9 +338,9 @@ export function DatabaseBrowserWidget({ config }: DatabaseBrowserWidgetProps) {
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
-                                            {queryMutation.data.rows.map((row: any, i: number) => (
+                                            {queryMutation.data.rows.map((row, i) => (
                                                 <TableRow key={i} className="border-white/5">
-                                                    {Object.values(row).map((val: any, j: number) => (
+                                                    {Object.values(row).map((val, j) => (
                                                         <TableCell key={j} className="text-[10px] py-2 truncate max-w-[150px] font-mono text-muted-foreground">
                                                             {String(val ?? "-")}
                                                         </TableCell>
@@ -360,7 +377,7 @@ export function DatabaseBrowserWidget({ config }: DatabaseBrowserWidgetProps) {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {schemaData.columns.map((col: any) => (
+                                        {schemaData.columns.map(col => (
                                             <TableRow key={col.name} className="border-white/5">
                                                 <TableCell className="text-xs font-bold text-blue-400">{col.name}</TableCell>
                                                 <TableCell className="text-xs font-mono">{col.type}</TableCell>

@@ -3,16 +3,17 @@ import html2canvas from 'html2canvas';
 /**
  * Export data to CSV file
  */
-export function exportToCSV(data: any, filename: string) {
-  let rows: any[] = [];
+export function exportToCSV(data: object | object[], filename: string) {
+  let rows: object[] = [];
   
   if (Array.isArray(data)) {
     rows = data;
   } else if (data && typeof data === 'object') {
     // Handle single object or nested data
-    const possibleData = data.data || data.records || data.results;
+    const record = data as Record<string, unknown>;
+    const possibleData = record.data || record.records || record.results;
     if (Array.isArray(possibleData)) {
-      rows = possibleData;
+      rows = possibleData.filter((item): item is object => item !== null && typeof item === 'object');
     } else {
       rows = [data];
     }
@@ -25,7 +26,7 @@ export function exportToCSV(data: any, filename: string) {
     headers.join(','),
     ...rows.map(row => 
       headers.map(h => {
-        const val = row[h];
+        const val = (row as Record<string, unknown>)[h];
         // Escape commas and quotes
         if (typeof val === 'string' && (val.includes(',') || val.includes('"'))) {
           return `"${val.replace(/"/g, '""')}"`;
@@ -42,7 +43,7 @@ export function exportToCSV(data: any, filename: string) {
 /**
  * Export data to JSON file
  */
-export function exportToJSON(data: any, filename: string) {
+export function exportToJSON(data: object | object[], filename: string) {
   const json = JSON.stringify(data, null, 2);
   const blob = new Blob([json], { type: 'application/json' });
   downloadBlob(blob, `${filename}.json`);
@@ -62,7 +63,7 @@ export async function exportToPNG(elementId: string, filename: string) {
     const canvas = await html2canvas(element, {
       backgroundColor: '#0a0a0a', // Match theme background
       useCORS: true,
-    } as any);
+    });
     
     canvas.toBlob((blob) => {
       if (blob) downloadBlob(blob, `${filename}.png`);

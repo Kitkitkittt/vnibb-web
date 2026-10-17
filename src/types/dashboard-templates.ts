@@ -1,4 +1,4 @@
-import type { WidgetType } from './dashboard';
+import type { WidgetConfig, WidgetType } from './dashboard';
 
 export interface DashboardTemplate {
   id: string;
@@ -9,7 +9,7 @@ export interface DashboardTemplate {
   widgets: Array<{
     type: WidgetType;
     layout: { x: number; y: number; w: number; h: number };
-    config?: Record<string, any>;
+    config?: WidgetConfig;
   }>;
 }
 

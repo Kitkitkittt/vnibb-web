@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Plus, Filter } from 'lucide-react';
 import { FilterPill } from './FilterPill';
 import { cn } from '@/lib/utils';
+import type { ScreenerFilterValue } from '@/types/screener';
 
 const AVAILABLE_FILTERS = [
   {
@@ -25,7 +26,7 @@ const AVAILABLE_FILTERS = [
     ],
   },
   {
-    id: 'pe_ratio',
+    id: 'pe',
     label: 'P/E',
     presets: [
       { label: 'Under 10', value: { lt: 10 } },
@@ -34,7 +35,7 @@ const AVAILABLE_FILTERS = [
     ],
   },
   {
-    id: 'change',
+    id: 'change_1d',
     label: 'Change %',
     presets: [
       { label: 'Gainers (+5%)', value: { gte: 5 } },
@@ -56,7 +57,7 @@ const AVAILABLE_FILTERS = [
 
 export interface ActiveFilter {
   id: string;
-  value: any;
+  value: ScreenerFilterValue;
   displayValue: string;
 }
 
@@ -90,7 +91,7 @@ export function FilterBar({ filters, onChange }: FilterBarProps) {
     setShowAddMenu(false);
   };
 
-  const updateFilter = (id: string, value: any, displayValue: string) => {
+  const updateFilter = (id: string, value: ScreenerFilterValue, displayValue: string) => {
     onChange(filters.map(f => f.id === id ? { ...f, value, displayValue } : f));
   };
 

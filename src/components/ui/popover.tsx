@@ -17,7 +17,18 @@ export const Popover = ({ children }: { children: React.ReactNode }) => {
     );
 };
 
-export const PopoverTrigger = ({ children, asChild }: any) => {
+interface PopoverTriggerProps {
+    children: React.ReactNode;
+    asChild?: boolean;
+}
+
+interface PopoverContentProps {
+    children: React.ReactNode;
+    className?: string;
+    align?: 'left' | 'center' | 'right';
+}
+
+export const PopoverTrigger = ({ children, asChild }: PopoverTriggerProps) => {
     const context = useContext(PopoverContext);
     if (!context) return null;
 
@@ -27,7 +38,7 @@ export const PopoverTrigger = ({ children, asChild }: any) => {
     };
 
     if (asChild && React.isValidElement(children)) {
-        return React.cloneElement(children as React.ReactElement<any>, {
+        return React.cloneElement(children as React.ReactElement<Record<string, unknown>>, {
             onClick: handleClick
         });
     }
@@ -35,7 +46,7 @@ export const PopoverTrigger = ({ children, asChild }: any) => {
     return <button onClick={handleClick}>{children}</button>;
 };
 
-export const PopoverContent = ({ children, className = '', align = 'center' }: any) => {
+export const PopoverContent = ({ children, className = '', align = 'center' }: PopoverContentProps) => {
     const context = useContext(PopoverContext);
     const ref = useRef<HTMLDivElement>(null);
 

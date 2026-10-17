@@ -8,6 +8,8 @@ import {
     useReducer,
     useCallback,
     useEffect,
+    useState,
+    useSyncExternalStore,
     type ReactNode,
 } from 'react';
 import type { DataSource, DataSourceState, DataSourceCreate } from '@/types/dataSource';
@@ -15,6 +17,9 @@ import { createDataSource } from '@/types/dataSource';
 
 const STORAGE_KEY = 'vnibb_data_sources';
 const VNSTOCK_SOURCE_KEY = 'vnibb_vnstock_source';
+const subscribeToHydration = () => () => {};
+const clientSnapshot = () => true;
+const serverSnapshot = () => false;
 
 export type VnstockSource = 'KBS' | 'VCI' | 'TCBS' | 'DNSE';
 
@@ -116,8 +121,9 @@ const initialState: DataSourceState = {
 export function DataSourcesProvider({ children }: DataSourcesProviderProps) {
     const [state, dispatch] = useReducer(dataSourceReducer, initialState);
 
-    // Load from localStorage on mount
-    useEffect(() => {
+    const [initialized, setInitialized] = useState(false);
+    const hydrated = useSyncExternalStore(subscribeToHydration, clientSnapshot, serverSnapshot);
+    if (hydrated && !initialized) {
         try {
             const saved = localStorage.getItem(STORAGE_KEY);
             if (saved) {
@@ -131,19 +137,21 @@ export function DataSourcesProvider({ children }: DataSourcesProviderProps) {
         } catch (error) {
             console.error('Failed to load data sources from localStorage:', error);
         }
-    }, []);
+        setInitialized(true);
+    }
 
 
 
     // Persist to localStorage on state change
     useEffect(() => {
+        if (!initialized) return;
         try {
             localStorage.setItem(STORAGE_KEY, JSON.stringify({ dataSources: state.dataSources }));
             localStorage.setItem(VNSTOCK_SOURCE_KEY, state.vnstockSource);
         } catch (error) {
             console.error('Failed to save data sources to localStorage:', error);
         }
-    }, [state]);
+    }, [state, initialized]);
 
     // Add a new data source
     const addDataSource = useCallback((data: DataSourceCreate): DataSource => {
@@ -234,9 +242,13 @@ export function DataSourcesProvider({ children }: DataSourcesProviderProps) {
 // ============================================================================
 // Hook
 // ============================================================================
+export function useOptionalDataSources() {
+    return useContext(DataSourcesContext);
+}
+
 
 export function useDataSources() {
-    const context = useContext(DataSourcesContext);
+    const context = useOptionalDataSources();
     if (!context) {
         throw new Error('useDataSources must be used within a DataSourcesProvider');
     }

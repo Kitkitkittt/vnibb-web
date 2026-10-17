@@ -33,6 +33,36 @@ export function TabBar({ symbol }: TabBarProps) {
         deleteTab,
         reorderTabs,
     } = useDashboard();
+    const sortedTabs = [...(activeDashboard?.tabs ?? [])].sort((a, b) => a.order - b.order);
+    const handleAddTab = useCallback(() => {
+        if (!activeDashboard) return;
+        const tab = createTab(activeDashboard.id, 'New Tab');
+        setActiveTab(tab.id);
+        // Auto-start editing the new tab name
+        setEditingTabId(tab.id);
+        setEditingName('New Tab');
+    }, [activeDashboard, createTab, setActiveTab]);
+    // Delete tab with confirmation
+    const handleDeleteTab = useCallback((tabId: string) => {
+        if (!activeDashboard || activeDashboard.tabs.length <= 1) return;
+
+        if (deleteConfirmTabId === tabId) {
+            // Second click - actually delete
+            deleteTab(activeDashboard.id, tabId);
+            setDeleteConfirmTabId(null);
+
+            // Switch to first available tab if we deleted the active one
+            if (activeTab?.id === tabId) {
+                const remainingTabs = [...activeDashboard.tabs].sort((a, b) => a.order - b.order).filter(t => t.id !== tabId);
+                if (remainingTabs.length > 0) {
+                    setActiveTab(remainingTabs[0].id);
+                }
+            }
+        } else {
+            // First click - show confirmation
+            setDeleteConfirmTabId(tabId);
+        }
+    }, [activeDashboard, activeTab, deleteConfirmTabId, deleteTab, setActiveTab]);
 
     // Focus input when editing starts
     useEffect(() => {
@@ -83,17 +113,9 @@ export function TabBar({ symbol }: TabBarProps) {
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [activeDashboard, activeTab]);
+    }, [activeDashboard, activeTab, handleAddTab, handleDeleteTab]);
 
-    if (!activeDashboard) {
-        return (
-            <div className="border-b border-[#1e2a3b] bg-[#0b1021]/80 backdrop-blur-sm h-9 flex items-center px-4">
-                <span className="text-gray-500 text-xs">No dashboard selected</span>
-            </div>
-        );
-    }
 
-    const sortedTabs = [...activeDashboard.tabs].sort((a, b) => a.order - b.order);
 
     // Swipe gesture handlers for mobile tab navigation
     const handleSwipeLeft = useCallback(() => {
@@ -116,6 +138,13 @@ export function TabBar({ symbol }: TabBarProps) {
         onSwipeLeft: handleSwipeLeft,
         onSwipeRight: handleSwipeRight,
     });
+    if (!activeDashboard) {
+        return (
+            <div className="border-b border-[#1e2a3b] bg-[#0b1021]/80 backdrop-blur-sm h-9 flex items-center px-4">
+                <span className="text-gray-500 text-xs">No dashboard selected</span>
+            </div>
+        );
+    }
 
     const handleTabClick = (tabId: string) => {
         if (editingTabId !== tabId) {
@@ -123,13 +152,6 @@ export function TabBar({ symbol }: TabBarProps) {
         }
     };
 
-    const handleAddTab = () => {
-        const tab = createTab(activeDashboard.id, 'New Tab');
-        setActiveTab(tab.id);
-        // Auto-start editing the new tab name
-        setEditingTabId(tab.id);
-        setEditingName('New Tab');
-    };
 
     // Double-click to start inline rename
     const handleDoubleClick = (tab: DashboardTab) => {
@@ -163,27 +185,6 @@ export function TabBar({ symbol }: TabBarProps) {
         }
     };
 
-    // Delete tab with confirmation
-    const handleDeleteTab = (tabId: string) => {
-        if (activeDashboard.tabs.length <= 1) return;
-
-        if (deleteConfirmTabId === tabId) {
-            // Second click - actually delete
-            deleteTab(activeDashboard.id, tabId);
-            setDeleteConfirmTabId(null);
-
-            // Switch to first available tab if we deleted the active one
-            if (activeTab?.id === tabId) {
-                const remainingTabs = sortedTabs.filter(t => t.id !== tabId);
-                if (remainingTabs.length > 0) {
-                    setActiveTab(remainingTabs[0].id);
-                }
-            }
-        } else {
-            // First click - show confirmation
-            setDeleteConfirmTabId(tabId);
-        }
-    };
 
     // Drag and drop handlers
     const handleDragStart = (e: React.DragEvent, tabId: string) => {

@@ -6,18 +6,12 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as api from './api';
 import type { DashboardCreate, WidgetCreate } from '@/types/dashboard';
 import type { AlertSettings } from '@/types/insider';
-import { useDataSources, type VnstockSource } from '@/contexts/DataSourcesContext';
+import { useOptionalDataSources, type VnstockSource } from '@/contexts/DataSourcesContext';
 
 // Helper hook to get the preferred VnStock source
 export function useVnstockSource(): VnstockSource {
-    try {
-        const { preferredVnstockSource } = useDataSources();
-        return preferredVnstockSource;
-    } catch {
-        // If used outside of DataSourcesProvider, default to KBS
-        return 'KBS';
-
-    }
+    const context = useOptionalDataSources();
+    return context?.preferredVnstockSource ?? 'KBS';
 }
 
 // ============ Query Keys ============
@@ -97,14 +91,7 @@ export function useHistoricalPrices(
     }
 ) {
     // Get the preferred source from context, but allow override via options
-    let preferredSource: VnstockSource = 'KBS';
-
-    try {
-        const { preferredVnstockSource } = useDataSources();
-        preferredSource = preferredVnstockSource;
-    } catch {
-        // Outside of DataSourcesProvider, use default
-    }
+    const preferredSource = useVnstockSource();
 
     const source = options?.source ?? preferredSource;
 
@@ -318,14 +305,7 @@ export function useScreenerData(options?: {
     enabled?: boolean;
 }) {
     // Get the preferred source from context, but allow override via options
-    let preferredSource: VnstockSource = 'KBS';
-
-    try {
-        const { preferredVnstockSource } = useDataSources();
-        preferredSource = preferredVnstockSource;
-    } catch {
-        // Outside of DataSourcesProvider, use default
-    }
+    const preferredSource = useVnstockSource();
 
     const source = options?.source ?? preferredSource;
 

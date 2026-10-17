@@ -21,7 +21,7 @@ function IndexComparisonWidgetComponent() {
     <WidgetContainer title="Index Comparison">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 h-full">
         {INDICES.map(index => {
-          const data = dataList.find((i: any) => 
+          const data = dataList.find(i =>
             i.index_name === index.symbol || 
             i.index_name === index.name ||
             (index.symbol === 'VNINDEX' && i.index_name === 'VN-INDEX')

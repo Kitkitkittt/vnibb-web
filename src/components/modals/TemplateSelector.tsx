@@ -12,7 +12,9 @@ interface TemplateSelectorProps {
   onSelectTemplate: (template: DashboardTemplate) => void;
 }
 
-const CATEGORY_ICONS: Record<string, any> = {
+import type { LucideIcon } from 'lucide-react';
+
+const CATEGORY_ICONS: Record<DashboardTemplate['category'], LucideIcon> = {
   trading: TrendingUp,
   analysis: Search,
   research: Layout,

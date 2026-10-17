@@ -69,7 +69,7 @@ export function OfflineIndicator() {
     return (
         <div className="flex flex-col items-center justify-center h-full min-h-[100px] p-4 text-center">
             <WifiOff size={20} className="text-gray-500 mb-2" />
-            <p className="text-xs text-gray-500 font-medium">You're offline</p>
+            <p className="text-xs text-gray-500 font-medium">You&apos;re offline</p>
             <p className="text-xs text-gray-600 mt-1">Check your connection</p>
         </div>
     );

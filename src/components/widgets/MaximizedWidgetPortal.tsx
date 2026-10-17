@@ -2,7 +2,7 @@
 
 import { createPortal } from 'react-dom';
 import { Minimize2 } from 'lucide-react';
-import { useEffect, useState, useCallback, type ReactNode } from 'react';
+import { useEffect, useState, useCallback, useSyncExternalStore, type ReactNode } from 'react';
 
 interface MaximizedWidgetPortalProps {
     isOpen: boolean;
@@ -11,27 +11,28 @@ interface MaximizedWidgetPortalProps {
     children: ReactNode;
 }
 
+const subscribeToHydration = () => () => {};
+
 export function MaximizedWidgetPortal({
     isOpen,
     onClose,
     title,
     children
 }: MaximizedWidgetPortalProps) {
-    const [mounted, setMounted] = useState(false);
+    const mounted = useSyncExternalStore(subscribeToHydration, () => true, () => false);
     const [isAnimating, setIsAnimating] = useState(false);
+    const [previousOpen, setPreviousOpen] = useState(isOpen);
 
-    // Handle mount state for SSR safety
-    useEffect(() => {
-        setMounted(true);
-    }, []);
+    if (previousOpen !== isOpen) {
+        setPreviousOpen(isOpen);
+        if (!isOpen) setIsAnimating(false);
+    }
 
     // Trigger animation on open
     useEffect(() => {
         if (isOpen) {
-            // Small delay to trigger CSS transition
-            requestAnimationFrame(() => setIsAnimating(true));
-        } else {
-            setIsAnimating(false);
+            const frame = requestAnimationFrame(() => setIsAnimating(true));
+            return () => cancelAnimationFrame(frame);
         }
     }, [isOpen]);
 

@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 import { StickyNote, Save, Trash2 } from 'lucide-react';
 
 interface NotesWidgetProps {
@@ -13,19 +13,20 @@ interface NotesWidgetProps {
 
 const STORAGE_KEY = 'vnibb_notes';
 
-export function NotesWidget({ symbol, isEditing, onRemove }: NotesWidgetProps) {
-    const [notes, setNotes] = useState('');
-    const [savedNotes, setSavedNotes] = useState<Record<string, string>>({});
-    const [isSaved, setIsSaved] = useState(true);
+const subscribeToHydration = () => () => {};
 
-    useEffect(() => {
+export function NotesWidget(props: NotesWidgetProps) {
+    const hydrated = useSyncExternalStore(subscribeToHydration, () => true, () => false);
+    return hydrated ? <NotesSession key={props.symbol} {...props} /> : null;
+}
+
+function NotesSession({ symbol }: NotesWidgetProps) {
+    const [savedNotes, setSavedNotes] = useState<Record<string, string>>(() => {
         const stored = localStorage.getItem(STORAGE_KEY);
-        if (stored) {
-            const parsed = JSON.parse(stored);
-            setSavedNotes(parsed);
-            setNotes(parsed[symbol] || '');
-        }
-    }, [symbol]);
+        return stored ? JSON.parse(stored) : {};
+    });
+    const [notes, setNotes] = useState(savedNotes[symbol] || '');
+    const [isSaved, setIsSaved] = useState(true);
 
     const saveNote = () => {
         const updated = { ...savedNotes, [symbol]: notes };

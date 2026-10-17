@@ -53,14 +53,21 @@ function ComparisonAnalysisWidgetComponent({
   };
 
   const filteredMetrics = useMemo(() => {
-    return data?.metrics?.filter((m: any) => m.category === activeCategory) || [];
+    const categories: Record<string, string[]> = {
+      valuation: ['pe_ratio', 'pb_ratio', 'ps_ratio', 'ev_ebitda', 'market_cap'],
+      profitability: ['roe', 'roa', 'net_margin', 'gross_margin', 'operating_margin'],
+      liquidity: ['current_ratio', 'quick_ratio'],
+      efficiency: ['asset_turnover', 'inventory_turnover'],
+      leverage: ['debt_equity'],
+    };
+    return data?.metrics.filter(m => categories[activeCategory]?.includes(m.key)) || [];
   }, [data, activeCategory]);
 
   const getBestWorst = (metricId: string) => {
     if (!data?.stocks) return { best: null, worst: null };
     const values = data.stocks
-        .map((s: any) => s.metrics[metricId])
-        .filter((v: any) => v !== null && v !== undefined);
+        .map(s => s.metrics[metricId])
+        .filter((v): v is number => v !== null && v !== undefined);
     if (values.length === 0) return { best: null, worst: null };
     return { best: Math.max(...values), worst: Math.min(...values) };
   };
@@ -158,7 +165,7 @@ function ComparisonAnalysisWidgetComponent({
               <thead className="sticky top-0 bg-[#0a0a0a] z-10">
                 <tr className="border-b border-gray-800">
                   <th className="p-3 text-gray-500 font-bold uppercase tracking-tighter">Metric</th>
-                  {data?.stocks?.map((stock: any) => (
+                  {data?.stocks?.map(stock => (
                     <th key={stock.symbol} className="text-right p-3 text-white font-black uppercase">
                       {stock.symbol}
                     </th>
@@ -166,18 +173,18 @@ function ComparisonAnalysisWidgetComponent({
                 </tr>
               </thead>
               <tbody>
-                {filteredMetrics.map((metric: any) => {
-                  const { best, worst } = getBestWorst(metric.id);
+                {filteredMetrics.map(metric => {
+                  const { best, worst } = getBestWorst(metric.key);
                   return (
-                    <tr key={metric.id} className="border-b border-gray-800/30 hover:bg-white/5 transition-colors group">
-                      <td className="p-3 text-gray-400 font-medium group-hover:text-gray-200">{metric.name}</td>
-                      {data?.stocks?.map((stock: any) => {
-                        const value = stock.metrics[metric.id];
+                    <tr key={metric.key} className="border-b border-gray-800/30 hover:bg-white/5 transition-colors group">
+                      <td className="p-3 text-gray-400 font-medium group-hover:text-gray-200">{metric.label}</td>
+                      {data?.stocks?.map(stock => {
+                        const value = stock.metrics[metric.key];
                         const isBest = value !== null && value === best && data.stocks.length > 1;
                         const isWorst = value !== null && value === worst && data.stocks.length > 1;
                         
                         // Inverse logic for some metrics (P/E, Debt/Equity, etc.)
-                        const isLowerBetter = metric.id.includes('ratio') || metric.id.includes('debt');
+                        const isLowerBetter = metric.key.includes('ratio') || metric.key.includes('debt');
                         const highlightColor = isLowerBetter 
                             ? (isWorst ? 'text-green-400' : isBest ? 'text-red-400' : 'text-white')
                             : (isBest ? 'text-green-400' : isWorst ? 'text-red-400' : 'text-white');

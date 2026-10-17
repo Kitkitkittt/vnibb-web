@@ -423,10 +423,6 @@ export function PortfolioTrackerWidget({
         }
     };
 
-    const SortIcon = ({ field }: { field: typeof sortField }) => {
-        if (sortField !== field) return null;
-        return sortAsc ? <ChevronUp size={10} /> : <ChevronDown size={10} />;
-    };
 
     const isProfit = totals.totalPL >= 0;
 
@@ -534,7 +530,7 @@ export function PortfolioTrackerWidget({
                                     onClick={() => handleSort('symbol')}
                                 >
                                     <span className="flex items-center gap-0.5">
-                                        Symbol <SortIcon field="symbol" />
+                                        Symbol {sortField === 'symbol' && (sortAsc ? <ChevronUp size={10} /> : <ChevronDown size={10} />)}
                                     </span>
                                 </th>
                                 <th className="text-right py-1.5 px-1 font-medium">Qty</th>
@@ -543,7 +539,7 @@ export function PortfolioTrackerWidget({
                                     onClick={() => handleSort('value')}
                                 >
                                     <span className="flex items-center justify-end gap-0.5">
-                                        Value <SortIcon field="value" />
+                                        Value {sortField === 'value' && (sortAsc ? <ChevronUp size={10} /> : <ChevronDown size={10} />)}
                                     </span>
                                 </th>
                                 <th
@@ -551,7 +547,7 @@ export function PortfolioTrackerWidget({
                                     onClick={() => handleSort('pl')}
                                 >
                                     <span className="flex items-center justify-end gap-0.5">
-                                        P/L <SortIcon field="pl" />
+                                        P/L {sortField === 'pl' && (sortAsc ? <ChevronUp size={10} /> : <ChevronDown size={10} />)}
                                     </span>
                                 </th>
                                 <th className="w-12"></th>

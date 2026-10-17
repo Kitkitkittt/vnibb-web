@@ -36,7 +36,7 @@ export function calculateSMA(data: OHLCData[], period: number) {
 /**
  * Calculate Exponential Moving Average (EMA)
  */
-export function calculateEMA(data: OHLCData[], period: number) {
+export function calculateEMA(data: Pick<OHLCData, 'time' | 'close'>[], period: number) {
     const ema = [];
     const k = 2 / (period + 1);
     let prevEma: number | null = null;
@@ -143,19 +143,19 @@ export function calculateRSI(data: OHLCData[], period: number = 14) {
             else losses -= change;
 
             if (i === period) {
-                let averageGain = gains / period;
-                let averageLoss = losses / period;
-                let rs = averageLoss === 0 ? 100 : averageGain / averageLoss;
+                const averageGain = gains / period;
+                const averageLoss = losses / period;
+                const rs = averageLoss === 0 ? 100 : averageGain / averageLoss;
                 rsi.push({ time: data[i].time, value: 100 - (100 / (1 + rs)) });
             } else {
                 rsi.push({ time: data[i].time, value: undefined });
             }
         } else {
-            let averageGain = ((gains * (period - 1)) + (change > 0 ? change : 0)) / period;
-            let averageLoss = ((losses * (period - 1)) + (change < 0 ? -change : 0)) / period;
+            const averageGain = ((gains * (period - 1)) + (change > 0 ? change : 0)) / period;
+            const averageLoss = ((losses * (period - 1)) + (change < 0 ? -change : 0)) / period;
             gains = averageGain;
             losses = averageLoss;
-            let rs = averageLoss === 0 ? 100 : averageGain / averageLoss;
+            const rs = averageLoss === 0 ? 100 : averageGain / averageLoss;
             rsi.push({ time: data[i].time, value: 100 - (100 / (1 + rs)) });
         }
     }
@@ -170,7 +170,7 @@ export function calculateMACD(data: OHLCData[], fast: number = 12, slow: number 
     const slowEma = calculateEMA(data, slow);
 
     const macdLine: { time: number | string; value: number }[] = [];
-    const macdDataForSignal: any[] = [];
+    const macdDataForSignal: Pick<OHLCData, 'time' | 'close'>[] = [];
 
     // Map by time for alignment
     const slowMap = new Map(slowEma.map(d => [d.time.toString(), d.value]));
@@ -184,7 +184,7 @@ export function calculateMACD(data: OHLCData[], fast: number = 12, slow: number 
         }
     });
 
-    const signalLine = calculateEMA(macdDataForSignal as any, signal);
+    const signalLine = calculateEMA(macdDataForSignal, signal);
     const signalMap = new Map(signalLine.map(d => [d.time.toString(), d.value]));
 
     const histogram = macdLine.map(m => {

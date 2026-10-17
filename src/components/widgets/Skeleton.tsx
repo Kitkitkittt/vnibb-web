@@ -83,7 +83,7 @@ export const ChartSkeleton: React.FC = () => {
                         key={i}
                         className="skeleton-chart__bar"
                         style={{
-                            height: `${Math.random() * 60 + 20}%`,
+                            height: `${20 + ((i * 17) % 60)}%`,
                             animationDelay: `${i * 50}ms`,
                         }}
                     />

@@ -1,16 +1,18 @@
-export function formatScreenerValue(value: any, format?: string): string {
+export function formatScreenerValue(value: unknown, format?: string): string {
   if (value === null || value === undefined) return '—';
   
   switch (format) {
     case 'currency':
-      return formatCurrency(value);
+      return typeof value === 'number' ? formatCurrency(value) : '—';
     case 'percent':
-      return `${(value * 100).toFixed(2)}%`;
-    case 'change':
+      return typeof value === 'number' ? `${(value * 100).toFixed(2)}%` : '—';
+    case 'change': {
+      if (typeof value !== 'number') return '—';
       const prefix = value >= 0 ? '+' : '';
       return `${prefix}${(value * 100).toFixed(2)}%`;
+    }
     case 'number':
-      return formatNumber(value);
+      return typeof value === 'number' ? formatNumber(value) : '—';
     default:
       return String(value);
   }

@@ -8,7 +8,7 @@ export interface ScreenerFilter {
   label: string;
   field: string;
   operator: 'gt' | 'lt' | 'eq' | 'between';
-  value: any;
+  value: number | [number, number];
 }
 
 interface QuickFiltersProps {

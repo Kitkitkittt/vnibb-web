@@ -2,6 +2,7 @@
 
 'use client';
 
+import { useState } from 'react';
 import { Activity, TrendingUp, TrendingDown, BarChart2, DollarSign } from 'lucide-react';
 import { useHistoricalPrices, useScreenerData } from '@/lib/queries';
 
@@ -12,8 +13,9 @@ interface QuickStatsWidgetProps {
 }
 
 export function QuickStatsWidget({ symbol, isEditing, onRemove }: QuickStatsWidgetProps) {
+    const [startDate] = useState(() => new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
     const { data: prices, isLoading: pricesLoading } = useHistoricalPrices(symbol, {
-        startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        startDate,
     });
     const { data: screenerData, isLoading: screenerLoading } = useScreenerData({ symbol, enabled: !!symbol });
     const stock = screenerData?.data?.find(s => s.ticker === symbol) || screenerData?.data?.[0];

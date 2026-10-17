@@ -16,6 +16,13 @@ interface MarketHeatmapWidgetProps {
     onRemove?: () => void;
 }
 
+interface TreemapDatum {
+    name: string;
+    value: number;
+    changePct: number;
+    children?: TreemapDatum[];
+}
+
 // Color scale based on Phase 20 MD
 function getHeatmapColor(change: number): string {
     if (change >= 6.9) return 'rgb(168, 85, 247)'; // purple-500 (Ceiling)
@@ -41,11 +48,13 @@ function MarketHeatmapWidgetComponent({ id, isEditing, onRemove }: MarketHeatmap
         use_cache: true,
     });
 
-    const treemapData = useMemo(() => {
+    const treemapData = useMemo<TreemapDatum | null>(() => {
         if (!data?.sectors) return null;
 
         return {
             name: 'Market',
+            value: 0,
+            changePct: 0,
             children: data.sectors.map((sector: SectorGroup) => ({
                 name: sector.sector,
                 value: sector.total_market_cap,
@@ -60,11 +69,11 @@ function MarketHeatmapWidgetComponent({ id, isEditing, onRemove }: MarketHeatmap
         if (!treemapData) return null;
 
         const root = hierarchy(treemapData)
-            .sum((d: any) => d.value || 0)
+            .sum(d => d.value)
             .sort((a, b) => (b.value || 0) - (a.value || 0));
 
         // Use standard dimensions, SVG will scale
-        const layout = treemap<any>()
+        const layout = treemap<TreemapDatum>()
             .size([800, 500])
             .paddingOuter(4)
             .paddingTop(20)
@@ -77,7 +86,7 @@ function MarketHeatmapWidgetComponent({ id, isEditing, onRemove }: MarketHeatmap
     const handleExport = async () => {
         if (!heatmapRef.current) return;
         try {
-            const canvas = await html2canvas(heatmapRef.current, { background: '#000' } as any);
+            const canvas = await html2canvas(heatmapRef.current, { backgroundColor: '#000' });
             const link = document.createElement('a');
             link.download = `market-heatmap-${exchange}-${Date.now()}.png`;
             link.href = canvas.toDataURL();
@@ -91,7 +100,7 @@ function MarketHeatmapWidgetComponent({ id, isEditing, onRemove }: MarketHeatmap
         <div className="flex items-center gap-2 mr-2">
             <select 
                 value={groupBy} 
-                onChange={(e) => setGroupBy(e.target.value as any)}
+                onChange={(e) => setGroupBy(e.target.value === 'industry' ? 'industry' : 'sector')}
                 className="bg-gray-900 text-[9px] font-black uppercase text-gray-400 border border-gray-800 rounded px-1.5 py-0.5 outline-none hover:text-white transition-colors"
             >
                 <option value="sector">By Sector</option>
@@ -99,10 +108,10 @@ function MarketHeatmapWidgetComponent({ id, isEditing, onRemove }: MarketHeatmap
             </select>
 
             <div className="flex bg-gray-900 rounded p-0.5 border border-gray-800">
-                {['HOSE', 'HNX', 'ALL'].map(m => (
+                {(['HOSE', 'HNX', 'ALL'] as const).map(m => (
                     <button
                         key={m}
-                        onClick={() => setExchange(m as any)}
+                        onClick={() => setExchange(m)}
                         className={cn(
                             "px-2 py-0.5 text-[9px] font-bold rounded transition-all",
                             exchange === m ? "bg-blue-600 text-white shadow-sm" : "text-gray-500 hover:text-gray-300"
@@ -148,7 +157,7 @@ function MarketHeatmapWidgetComponent({ id, isEditing, onRemove }: MarketHeatmap
                     ) : (
                         <div ref={heatmapRef} className="w-full h-full p-2">
                             <svg width="100%" height="100%" viewBox="0 0 800 500" preserveAspectRatio="xMidYMid meet">
-                                {treemapLayout.leaves().map((node: any, i: number) => {
+                                {treemapLayout.leaves().map((node, i) => {
                                     const width = node.x1 - node.x0;
                                     const height = node.y1 - node.y0;
                                     const changePct = node.data.changePct || 0;

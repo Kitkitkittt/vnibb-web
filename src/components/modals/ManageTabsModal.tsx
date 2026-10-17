@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { X, GripVertical, Trash2, Plus } from 'lucide-react';
 import type { DashboardTab } from '@/types/dashboard';
 
@@ -13,17 +13,20 @@ interface ManageTabsModalProps {
     onSave: (tabs: DashboardTab[]) => void;
 }
 
-export function ManageTabsModal({ isOpen, onClose, tabs, onSave }: ManageTabsModalProps) {
-    const [localTabs, setLocalTabs] = useState<DashboardTab[]>([]);
+export function ManageTabsModal(props: ManageTabsModalProps) {
+    return props.isOpen ? <ManageTabsEditor {...props} /> : null;
+}
+
+function ManageTabsEditor({ isOpen, onClose, tabs, onSave }: ManageTabsModalProps) {
+    const [localTabs, setLocalTabs] = useState<DashboardTab[]>(() => [...tabs].sort((a, b) => a.order - b.order));
+    const [sourceTabs, setSourceTabs] = useState(tabs);
+    if (tabs !== sourceTabs) {
+        setSourceTabs(tabs);
+        setLocalTabs([...tabs].sort((a, b) => a.order - b.order));
+    }
     const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
     const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
-    // Reset local state when modal opens
-    useEffect(() => {
-        if (isOpen) {
-            setLocalTabs([...tabs].sort((a, b) => a.order - b.order));
-        }
-    }, [isOpen, tabs]);
 
     const handleNameChange = (index: number, name: string) => {
         setLocalTabs(prev => {
@@ -80,21 +83,18 @@ export function ManageTabsModal({ isOpen, onClose, tabs, onSave }: ManageTabsMod
         onClose();
     };
 
-    const handleCancel = () => {
-        setLocalTabs([...tabs].sort((a, b) => a.order - b.order));
-        onClose();
-    };
+    const handleCancel = onClose;
 
     // Handle escape key
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === 'Escape' && isOpen) {
-                handleCancel();
+                onClose();
             }
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [isOpen]);
+    }, [isOpen, onClose]);
 
     if (!isOpen) return null;
 

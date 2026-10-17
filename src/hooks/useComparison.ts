@@ -13,7 +13,7 @@ export interface StockMetrics {
     name?: string;
     industry?: string;
     exchange?: string;
-    metrics: Record<string, any>;
+    metrics: Record<string, number | string | null | undefined>;
 }
 
 export interface PricePerformancePoint {

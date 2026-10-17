@@ -9,10 +9,17 @@
  * 2. Set NEXT_PUBLIC_SENTRY_DSN in .env.local
  */
 
-// Track if Sentry is initialized
+interface SentryModule {
+  init(options: Record<string, unknown>): void;
+  metrics?: { distribution(name: string, value: number, options: { unit: string; tags: Record<string, string> }): void };
+  withScope?(callback: (scope: { setTag(key: string, value: string): void; setLevel(level: string): void }) => void): void;
+  captureException?(error: Error): void;
+  captureMessage?(message: string, level: 'fatal' | 'error' | 'warning' | 'info' | 'debug'): void;
+  setUser?(user: { id: string; username?: string } | null): void;
+  addBreadcrumb?(breadcrumb: { message: string; category: string; level: 'info'; data?: Record<string, unknown> }): void;
+}
+let SentryModule: SentryModule | null = null;
 let sentryInitialized = false;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let SentryModule: any = null;
 
 /**
  * Initialize monitoring. Safe to call even if Sentry is not installed.
@@ -33,11 +40,11 @@ export async function initMonitoring(): Promise<void> {
     // Dynamic import - will fail gracefully if @sentry/nextjs not installed
     // Using eval to prevent TypeScript from type-checking the module
     // eslint-disable-next-line no-eval
-    SentryModule = await (eval('import("@sentry/nextjs")') as Promise<unknown>);
-
-    if (!SentryModule?.init) {
+    const importedModule: unknown = await (eval('import("@sentry/nextjs")') as Promise<unknown>);
+    if (!importedModule || typeof importedModule !== 'object' || !('init' in importedModule) || typeof importedModule.init !== 'function') {
       throw new Error('Invalid Sentry module');
     }
+    SentryModule = importedModule as SentryModule;
 
     SentryModule.init({
       dsn: sentryDsn,
@@ -115,7 +122,7 @@ export function captureException(
       if (context?.level) {
         scope.setLevel(context.level);
       }
-      SentryModule.captureException(error);
+      SentryModule?.captureException?.(error);
     });
   }
 }

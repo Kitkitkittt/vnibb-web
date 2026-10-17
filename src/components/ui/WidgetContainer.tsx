@@ -5,6 +5,8 @@ import { WidgetHeader } from './WidgetHeader';
 import { cn } from '@/lib/utils';
 import { ExportButton } from './ExportButton';
 
+import type { ExportRecord } from './ExportButton';
+
 interface WidgetContainerProps {
   title: string;
   symbol?: string;
@@ -19,7 +21,7 @@ interface WidgetContainerProps {
   showSettings?: boolean;
   onSettingsClick?: () => void;
   noPadding?: boolean;
-  exportData?: any[] | Record<string, any>;
+  exportData?: ExportRecord[] | ExportRecord;
   exportFilename?: string;
   widgetId?: string;
   showLinkToggle?: boolean;

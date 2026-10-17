@@ -9,7 +9,7 @@ import { formatDistanceToNow } from 'date-fns';
 function MarketNewsWidgetComponent() {
   const { data: news, isLoading } = useQuery({
     queryKey: ['market-news-global'],
-    queryFn: async () => {
+    queryFn: async (): Promise<Array<{ id: string | number; url: string; title: string; published_date: string; source?: string }>> => {
         const res = await fetch('/api/v1/news/feed?limit=20');
         if (!res.ok) throw new Error('Failed to fetch news');
         const data = await res.json();
@@ -38,7 +38,7 @@ function MarketNewsWidgetComponent() {
             </div>
         ) : (
           <div className="divide-y divide-gray-800/30">
-            {news.map((item: any) => (
+            {news.map(item => (
               <a
                 key={item.id}
                 href={item.url}

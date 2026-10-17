@@ -33,7 +33,7 @@ export function ComparisonWidget({ id, initialSymbols = ['VNM', 'FPT'], hideHead
     const { data, isLoading, refetch } = useComparison(symbols);
     
     // Performance data fetch
-    const [perfData, setPerfData] = useState<any[]>([]);
+    const [perfData, setPerfData] = useState<Array<{ date: string } & Record<string, string | number>>>([]);
     const [perfLoading, setPerfLoading] = useState(false);
 
     useEffect(() => {
@@ -79,7 +79,7 @@ export function ComparisonWidget({ id, initialSymbols = ['VNM', 'FPT'], hideHead
             growth: ['revenue_growth', 'net_profit_growth', 'eps_growth']
         };
         const keys = mapping[activeCategory] || [];
-        return data.metrics.filter((m: any) => keys.includes(m.key));
+        return data.metrics.filter(m => keys.includes(m.key));
     }, [data, activeCategory]);
 
     return (
@@ -154,7 +154,7 @@ export function ComparisonWidget({ id, initialSymbols = ['VNM', 'FPT'], hideHead
                                     <Tooltip 
                                         contentStyle={{backgroundColor: '#111', border: '1px solid #333', fontSize: '10px'}}
                                         labelStyle={{color: '#666'}}
-                                        formatter={(v: any) => [`${(v - 100).toFixed(2)}%`, '']}
+                                        formatter={(v) => [`${(Number(v) - 100).toFixed(2)}%`, '']}
                                     />
                                     <Legend iconType="circle" wrapperStyle={{fontSize: '9px', fontWeight: 'bold'}} />
                                     {symbols.map((s, i) => (
@@ -192,13 +192,13 @@ export function ComparisonWidget({ id, initialSymbols = ['VNM', 'FPT'], hideHead
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-white/5">
-                                {categoryMetrics.map((m: any) => (
+                                {categoryMetrics.map(m => (
                                     <tr key={m.key} className="group hover:bg-white/[0.02]">
                                         <td className="p-3 text-muted-foreground font-bold group-hover:text-primary transition-colors border-r border-white/5">
                                             {m.label}
                                         </td>
                                         {symbols.map(s => {
-                                            const stock = data?.stocks.find((st: any) => st.symbol === s);
+                                            const stock = data?.stocks.find(st => st.symbol === s);
                                             const val = stock?.metrics[m.key];
                                             return (
                                                 <td key={s} className="p-3 text-right font-mono text-primary group-hover:bg-white/[0.01]">

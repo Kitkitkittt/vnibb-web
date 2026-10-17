@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { Search, Bell, User, Edit, Check, Bot, RotateCcw, X, Link as LinkIcon } from 'lucide-react';
 import { AlertNotificationPanel } from '../widgets/AlertNotificationPanel';
 import { ConnectionStatus } from '../ui/ConnectionStatus';
@@ -26,16 +26,11 @@ export function Header({
     onAIClick,
     onResetLayout
 }: HeaderProps) {
-    const [searchValue, setSearchValue] = useState(currentSymbol);
+    const [searchDraft, setSearchValue] = useState(currentSymbol);
     const [isSearching, setIsSearching] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
 
-    // Sync searchValue when currentSymbol changes externally (e.g., widget ticker click)
-    useEffect(() => {
-        if (!isSearching) {
-            setSearchValue(currentSymbol);
-        }
-    }, [currentSymbol, isSearching]);
+    const searchValue = isSearching ? searchDraft : currentSymbol;
 
     const handleSearch = useCallback(() => {
         if (searchValue.trim()) {
@@ -76,6 +71,7 @@ export function Header({
                             }}
                             onFocus={(e) => {
                                 e.target.select();
+                                setSearchValue(currentSymbol);
                                 setIsSearching(true);
                             }}
                             onKeyDown={handleKeyDown}

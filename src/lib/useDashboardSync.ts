@@ -150,7 +150,7 @@ export function useLoadFromBackend(
                 const response = await api.getDashboards();
                 if (response.data && response.data.length > 0) {
                     // Transform backend dashboards to frontend format
-                    const frontendDashboards = response.data.map((d: any) => ({
+                    const frontendDashboards = response.data.map(d => ({
                         id: String(d.id),
                         name: d.name,
                         description: d.description,

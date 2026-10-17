@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useState, useEffect } from 'react';
+import { memo, useState, type ComponentProps } from 'react';
 import { WidgetContainer } from '@/components/ui/WidgetContainer';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { NewsFilterBar } from './news/NewsFilterBar';
@@ -22,19 +22,17 @@ function NewsFlowWidgetComponent({ id, symbol: linkedSymbol, initialSymbols, onR
   });
 
   const [filters, setFilters] = useState({
-    symbols: initialSymbols || [],
+    symbols: isLinked && symbol ? [symbol] : initialSymbols || [],
     sentiment: null as string | null,
   });
 
-  // Sync symbols filter with linked symbol
-  useEffect(() => {
+  const [previousLink, setPreviousLink] = useState({ isLinked, symbol });
+  if (previousLink.isLinked !== isLinked || previousLink.symbol !== symbol) {
+    setPreviousLink({ isLinked, symbol });
     if (isLinked && symbol) {
-      setFilters(prev => ({
-        ...prev,
-        symbols: [symbol]
-      }));
+      setFilters(prev => ({ ...prev, symbols: [symbol] }));
     }
-  }, [isLinked, symbol]);
+  }
 
   const {
     data,
@@ -46,7 +44,7 @@ function NewsFlowWidgetComponent({ id, symbol: linkedSymbol, initialSymbols, onR
     isRefetching
   } = useInfiniteQuery({
     queryKey: ['news-flow', filters],
-    queryFn: async ({ pageParam = 0 }) => {
+    queryFn: async ({ pageParam = 0 }): Promise<{ items: ComponentProps<typeof NewsCard>['news'][]; has_more: boolean }> => {
       const params = new URLSearchParams();
       if (filters.symbols.length) params.set('symbols', filters.symbols.join(','));
       if (filters.sentiment) params.set('sentiment', filters.sentiment);
@@ -97,7 +95,7 @@ function NewsFlowWidgetComponent({ id, symbol: linkedSymbol, initialSymbols, onR
             </div>
           ) : (
             <div className="flex flex-col">
-              {allNews.map((item: any) => (
+              {allNews.map(item => (
                 <NewsCard key={item.id} news={item} />
               ))}
               

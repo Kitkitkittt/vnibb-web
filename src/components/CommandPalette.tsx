@@ -156,7 +156,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
       },
       category: 'settings',
     },
-  ], [state.dashboards, state.activeDashboardId, state.activeTabId, setActiveDashboard, addWidget, onOpenChange, search, setPreferredVnstockSource]);
+  ], [state.dashboards, state.activeDashboardId, state.activeTabId, setActiveDashboard, addWidget, onOpenChange, search, setPreferredVnstockSource, setGlobalSymbol]);
 
   // Filter commands based on search
   const filteredCommands = useMemo(() => 
@@ -201,7 +201,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
               <Command.List className="max-h-[400px] overflow-y-auto p-2 scrollbar-hide">
                 <Command.Empty className="py-10 text-center text-gray-500 text-sm">
                     <Box className="w-8 h-8 mx-auto mb-3 opacity-20" />
-                    No results found for "{search}"
+                    No results found for &quot;{search}&quot;
                 </Command.Empty>
 
                 {groupedCommands.navigation.length > 0 && (

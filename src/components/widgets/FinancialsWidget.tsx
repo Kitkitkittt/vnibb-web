@@ -11,6 +11,9 @@ import {
     ArrowUpRight, BarChart3, LayoutGrid
 } from 'lucide-react';
 import { WidgetContainer } from '@/components/ui/WidgetContainer';
+import type { BalanceSheetData, CashFlowData, FinancialRatioData, IncomeStatementData } from '@/types/equity';
+
+type FinancialRow = Partial<BalanceSheetData & CashFlowData & FinancialRatioData & IncomeStatementData>;
 
 type FinancialTab = 'balance_sheet' | 'income_statement' | 'cash_flow' | 'ratios';
 
@@ -49,18 +52,22 @@ function FinancialsWidgetComponent({ id, symbol, hideHeader, onRemove }: Financi
     }, [activeTab, incomeQuery, balanceQuery, cashFlowQuery, ratiosQuery]);
 
     const tableData = useMemo(() => {
-        if (!activeQuery?.data) return null;
+        if (!activeQuery.data) return null;
         const rawData = activeQuery.data.data || [];
 
         // Sort chronological for growth calculation
-        const sortedData = [...rawData].sort((a: any, b: any) => {
-            if (a.fiscal_year !== b.fiscal_year) return a.fiscal_year - b.fiscal_year;
-            return (a.fiscal_quarter || 0) - (b.fiscal_quarter || 0);
+        const sortedData = [...rawData].sort((a, b) => {
+            const yearA = 'fiscal_year' in a && typeof a.fiscal_year === 'number' ? a.fiscal_year : undefined;
+            const yearB = 'fiscal_year' in b && typeof b.fiscal_year === 'number' ? b.fiscal_year : undefined;
+            if (yearA !== yearB) return Number(yearA) - Number(yearB);
+            const quarterA = 'fiscal_quarter' in a && typeof a.fiscal_quarter === 'number' ? a.fiscal_quarter : 0;
+            const quarterB = 'fiscal_quarter' in b && typeof b.fiscal_quarter === 'number' ? b.fiscal_quarter : 0;
+            return quarterA - quarterB;
         });
 
-        const columns = rawData.map((d: any) => d.period).reverse(); // Latest first for display
+        const columns = rawData.map(d => d.period).reverse(); // Latest first for display
 
-        let metrics: any[] = [];
+        let metrics: { key: string; label: string; isPct?: boolean }[] = [];
         if (activeTab === 'ratios') {
             metrics = [
                 { key: 'pe_ratio', label: 'P/E' },
@@ -90,24 +97,28 @@ function FinancialsWidgetComponent({ id, symbol, hideHeader, onRemove }: Financi
         return {
             periods: columns,
             rows: metrics.map(m => {
-                const values: Record<string, any> = {};
-                rawData.forEach((d: any) => {
-                    const currentVal = d[m.key];
+                const values: Record<string, { val: number | undefined; growth: number | null }> = {};
+                const metricValue = (row: FinancialRow | undefined) => {
+                    const value = row && m.key in row ? row[m.key as keyof FinancialRow] : undefined;
+                    return typeof value === 'number' ? value : undefined;
+                };
+                rawData.forEach(d => {
+                    const currentVal = metricValue(d);
                     // Find previous period for growth
-                    const prevIndex = sortedData.findIndex((sd: any) => sd.period === d.period) - 1;
-                    const prevVal = prevIndex >= 0 ? (sortedData[prevIndex] as any)[m.key] : null;
+                    const prevIndex = sortedData.findIndex(sd => sd.period === d.period) - 1;
+                    const prevVal = prevIndex >= 0 ? metricValue(sortedData[prevIndex]) : undefined;
 
                     let growth = null;
-                    if (prevVal && prevVal !== 0 && currentVal !== null) {
+                    if (prevVal && prevVal !== 0 && currentVal !== undefined) {
                         growth = ((currentVal - prevVal) / Math.abs(prevVal)) * 100;
                     }
 
-                    values[d.period] = { val: currentVal, growth };
+                    values[String(d.period)] = { val: currentVal, growth };
                 });
                 return { label: m.label, isPct: m.isPct, values };
             })
         };
-    }, [activeQuery?.data, activeTab]);
+    }, [activeQuery.data, activeTab]);
 
     return (
         <WidgetContainer
@@ -193,9 +204,9 @@ function FinancialsWidgetComponent({ id, symbol, hideHeader, onRemove }: Financi
                                                 {row.label}
                                             </td>
                                             {tableData.periods.map(p => {
-                                                const data = row.values[p];
+                                                const data = row.values[String(p)];
                                                 const val = data?.val;
-                                                const growth = data?.growth;
+                                                const growth = data?.growth ?? null;
 
                                                 return (
                                                     <td key={p} className="p-3 text-right group-hover:bg-white/[0.01]">

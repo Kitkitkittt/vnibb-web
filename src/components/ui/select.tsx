@@ -9,7 +9,18 @@ const SelectContext = createContext<{
     setIsOpen: (open: boolean) => void;
 } | null>(null);
 
-export const Select = ({ value, onValueChange, children }: any) => {
+interface SelectProps {
+    value?: string;
+    onValueChange?: (value: string) => void;
+    children: React.ReactNode;
+}
+
+interface SelectChildrenProps {
+    children: React.ReactNode;
+    className?: string;
+}
+
+export const Select = ({ value, onValueChange, children }: SelectProps) => {
     const [isOpen, setIsOpen] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
 
@@ -32,7 +43,7 @@ export const Select = ({ value, onValueChange, children }: any) => {
     );
 };
 
-export const SelectTrigger = ({ className = '', children }: any) => {
+export const SelectTrigger = ({ className = '', children }: SelectChildrenProps) => {
     const context = useContext(SelectContext);
     if (!context) return null;
 
@@ -49,12 +60,12 @@ export const SelectTrigger = ({ className = '', children }: any) => {
     );
 };
 
-export const SelectValue = ({ placeholder }: any) => {
+export const SelectValue = ({ placeholder, children }: { placeholder?: string; children?: React.ReactNode }) => {
     const context = useContext(SelectContext);
-    return <span>{context?.value || placeholder}</span>;
+    return <span>{children ?? (context?.value || placeholder)}</span>;
 };
 
-export const SelectContent = ({ children, className = '' }: any) => {
+export const SelectContent = ({ children, className = '' }: SelectChildrenProps) => {
     const context = useContext(SelectContext);
     if (!context?.isOpen) return null;
 
@@ -65,7 +76,7 @@ export const SelectContent = ({ children, className = '' }: any) => {
     );
 };
 
-export const SelectItem = ({ children, value, className = '' }: any) => {
+export const SelectItem = ({ children, value, className = '' }: SelectChildrenProps & { value: string }) => {
     const context = useContext(SelectContext);
     if (!context) return null;
 

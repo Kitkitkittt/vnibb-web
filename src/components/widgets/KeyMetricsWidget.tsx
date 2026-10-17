@@ -12,6 +12,7 @@ import { Sparkline } from '@/components/ui/Sparkline';
 
 import { WidgetContainer } from '@/components/ui/WidgetContainer';
 import { useState } from 'react';
+import type { ScreenerData } from '@/types/screener';
 
 interface KeyMetricsWidgetProps {
     id: string;
@@ -19,7 +20,7 @@ interface KeyMetricsWidgetProps {
     isEditing?: boolean;
     hideHeader?: boolean;
     onRemove?: () => void;
-    onDataChange?: (data: any) => void;
+    onDataChange?: (data: ScreenerData) => void;
 }
 
 interface MetricRowProps {
@@ -47,7 +48,7 @@ export function KeyMetricsWidget({ id, symbol: initialSymbol, isEditing, hideHea
     const { data: screenData, isLoading, error, refetch } = useScreenerData({ limit: 100 });
     const { data: history } = useMetricsHistory(symbol);
 
-    const stock = screenData?.data?.find((s: any) => s.ticker === symbol);
+    const stock = screenData?.data?.find(s => s.ticker === symbol);
 
     return (
         <WidgetContainer

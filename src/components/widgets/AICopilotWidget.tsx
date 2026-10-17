@@ -159,8 +159,8 @@ export function AICopilotWidget({ isEditing, onRemove, initialContext }: AICopil
                     }
                 }
             }
-        } catch (error: any) {
-            if (error.name === 'AbortError') {
+        } catch (error) {
+            if (error instanceof Error && error.name === 'AbortError') {
                 setMessages(prev => prev.map(m =>
                     m.id === assistantMsgId
                         ? { ...m, content: m.content + '\n\n*[Cancelled]*', isStreaming: false }
@@ -169,7 +169,7 @@ export function AICopilotWidget({ isEditing, onRemove, initialContext }: AICopil
             } else {
                 setMessages(prev => prev.map(m =>
                     m.id === assistantMsgId
-                        ? { ...m, content: `❌ Error: ${error.message}\n\nPlease try again.`, isStreaming: false }
+                        ? { ...m, content: `❌ Error: ${error instanceof Error ? error.message : String(error)}\n\nPlease try again.`, isStreaming: false }
                         : m
                 ));
             }

@@ -46,7 +46,7 @@ function IntradayTradesWidgetComponent({ id, symbol, isEditing, onRemove }: Intr
         });
     }, [data]);
 
-    const columns = useMemo((): VirtualizedColumn<any>[] => [
+    const columns = useMemo((): VirtualizedColumn<(typeof trades)[number]>[] => [
         { 
             id: 'time', 
             header: 'Time', 

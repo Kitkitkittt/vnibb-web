@@ -5,7 +5,7 @@ export type Timeframe = 'D' | 'W' | 'M';
 
 export interface IndicatorDetail {
     name: string;
-    value: any;
+    value: unknown;
     signal: Signal;
 }
 
@@ -92,7 +92,7 @@ export interface VolatilityResponse {
     bollinger_bands: BollingerBandsResponse;
     adx: ADXResponse;
     volume: VolumeResponse | null;
-    ichimoku_cloud: any | null;
+    ichimoku_cloud: unknown;
 }
 
 export interface SupportResistanceResponse {

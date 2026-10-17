@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useSyncExternalStore } from 'react';
 import { Filter, X, Save, FolderOpen, RotateCcw } from 'lucide-react';
 
 export interface FilterState {
@@ -35,6 +35,38 @@ interface ScreenerFiltersProps {
 }
 
 const PRESET_STORAGE_KEY = 'screener_filter_presets';
+
+const EMPTY_PRESETS: FilterPreset[] = [];
+let cachedPresetsRaw: string | null = null;
+let cachedPresets = EMPTY_PRESETS;
+
+function subscribeToPresets(onStoreChange: () => void) {
+    window.addEventListener('storage', onStoreChange);
+    window.addEventListener('screener-presets-change', onStoreChange);
+    return () => {
+        window.removeEventListener('storage', onStoreChange);
+        window.removeEventListener('screener-presets-change', onStoreChange);
+    };
+}
+
+function getPresetsSnapshot(): FilterPreset[] {
+    try {
+        const raw = localStorage.getItem(PRESET_STORAGE_KEY);
+        if (raw === cachedPresetsRaw) return cachedPresets;
+        cachedPresetsRaw = raw;
+        if (!raw) return cachedPresets = EMPTY_PRESETS;
+        const parsed: unknown = JSON.parse(raw);
+        cachedPresets = Array.isArray(parsed) ? parsed.filter((preset): preset is FilterPreset =>
+            typeof preset === 'object' && preset !== null && typeof preset.name === 'string' &&
+            typeof preset.filters === 'object' && preset.filters !== null && !Array.isArray(preset.filters)
+        ) : EMPTY_PRESETS;
+    } catch {
+        return cachedPresets;
+    }
+    return cachedPresets;
+}
+
+
 
 // Default presets
 const DEFAULT_PRESETS: FilterPreset[] = [
@@ -133,21 +165,9 @@ function MinInput({
 }
 
 export function ScreenerFilters({ filters, onFilterChange, onClose }: ScreenerFiltersProps) {
-    const [presets, setPresets] = useState<FilterPreset[]>([]);
+    const presets = useSyncExternalStore(subscribeToPresets, getPresetsSnapshot, () => EMPTY_PRESETS);
     const [showPresetModal, setShowPresetModal] = useState(false);
     const [presetName, setPresetName] = useState('');
-
-    // Load presets from localStorage
-    useEffect(() => {
-        const stored = localStorage.getItem(PRESET_STORAGE_KEY);
-        if (stored) {
-            try {
-                setPresets(JSON.parse(stored));
-            } catch {
-                setPresets([]);
-            }
-        }
-    }, []);
 
     const updateFilter = useCallback(
         <K extends keyof FilterState>(key: K, value: FilterState[K]) => {
@@ -169,8 +189,8 @@ export function ScreenerFilters({ filters, onFilterChange, onClose }: ScreenerFi
         };
         
         const updated = [...presets.filter(p => p.name !== newPreset.name), newPreset];
-        setPresets(updated);
         localStorage.setItem(PRESET_STORAGE_KEY, JSON.stringify(updated));
+        window.dispatchEvent(new Event('screener-presets-change'));
         setPresetName('');
         setShowPresetModal(false);
     }, [presetName, filters, presets]);
@@ -185,8 +205,8 @@ export function ScreenerFilters({ filters, onFilterChange, onClose }: ScreenerFi
     const deletePreset = useCallback(
         (name: string) => {
             const updated = presets.filter(p => p.name !== name);
-            setPresets(updated);
             localStorage.setItem(PRESET_STORAGE_KEY, JSON.stringify(updated));
+            window.dispatchEvent(new Event('screener-presets-change'));
         },
         [presets]
     );

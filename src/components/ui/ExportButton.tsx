@@ -4,8 +4,10 @@ import { useState } from 'react';
 import { Download, FileSpreadsheet, FileJson, FileText, Check, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+export type ExportRecord = object;
+
 interface ExportButtonProps {
-  data: any[] | Record<string, any>;
+  data: ExportRecord[] | ExportRecord;
   filename?: string;
   formats?: ('csv' | 'xlsx' | 'json')[];
   disabled?: boolean;
@@ -31,7 +33,7 @@ export function ExportButton({
       headers.join(','),
       ...items.map(row => 
         headers.map(h => {
-          const val = row[h];
+          const val = (row as Record<string, unknown>)[h];
           // Escape quotes and wrap in quotes if contains comma
           if (typeof val === 'string' && (val.includes(',') || val.includes('"'))) {
             return `"${val.replace(/"/g, '""')}"`;
@@ -59,7 +61,7 @@ export function ExportButton({
     const headers = Object.keys(items[0]);
     const tsv = [
       headers.join('\t'),
-      ...items.map(row => headers.map(h => row[h] ?? '').join('\t'))
+      ...items.map(row => headers.map(h => (row as Record<string, unknown>)[h] ?? '').join('\t'))
     ].join('\n');
     
     downloadFile(tsv, `${filename}.xls`, 'application/vnd.ms-excel');

@@ -19,6 +19,13 @@ interface DatabaseStats {
     last_sync?: string;
 }
 
+type DatabaseRow = Record<string, unknown>;
+
+interface DatabaseStatsResponse {
+    tables?: Record<string, { count?: number; last_updated?: string }>;
+    last_checked?: string;
+}
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 async function fetchDatabaseStats(): Promise<DatabaseStats> {
@@ -26,8 +33,8 @@ async function fetchDatabaseStats(): Promise<DatabaseStats> {
         const response = await fetch(`${API_URL}/api/v1/admin/database/stats`);
         if (!response.ok) throw new Error('Admin stats endpoint failed');
 
-        const data = await response.json();
-        const tables = Object.entries(data.tables || {}).map(([name, info]: [string, any]) => ({
+        const data: DatabaseStatsResponse = await response.json();
+        const tables = Object.entries(data.tables || {}).map(([name, info]) => ({
             name,
             count: info.count || 0,
             last_updated: info.last_updated
@@ -50,13 +57,13 @@ async function fetchDatabaseStats(): Promise<DatabaseStats> {
     }
 }
 
-async function fetchTableSample(table: string, limit = 500) {
+async function fetchTableSample(table: string, limit = 500): Promise<{ rows: DatabaseRow[] }> {
   const res = await fetch(`${API_URL}/api/v1/admin/database/sample/${table}?limit=${limit}`);
   if (!res.ok) throw new Error('Failed to fetch sample');
   return res.json();
 }
 
-function formatValue(val: any): string {
+function formatValue(val: unknown): string {
   if (val === null || val === undefined) return '-';
   if (typeof val === 'number') return val.toLocaleString();
   if (typeof val === 'boolean') return val ? 'YES' : 'NO';
@@ -68,7 +75,7 @@ function formatValue(val: any): string {
   return String(val);
 }
 
-function convertToCSV(rows: any[]): string {
+function convertToCSV(rows: DatabaseRow[]): string {
   if (rows.length === 0) return '';
   const headers = Object.keys(rows[0]);
   const csvRows = [
@@ -115,7 +122,7 @@ function DatabaseInspectorWidgetComponent({ onRemove, lastRefresh }: { onRemove?
 
   const rows = useMemo(() => {
     if (!sampleData?.rows) return [];
-    return sampleData.rows.filter((row: any) =>
+    return sampleData.rows.filter(row =>
         searchTerm === '' ||
         Object.values(row).some(v => 
             String(v).toLowerCase().includes(searchTerm.toLowerCase())
@@ -123,7 +130,7 @@ function DatabaseInspectorWidgetComponent({ onRemove, lastRefresh }: { onRemove?
     );
   }, [sampleData, searchTerm]);
 
-  const columns = useMemo((): VirtualizedColumn<any>[] => {
+  const columns = useMemo((): VirtualizedColumn<DatabaseRow>[] => {
     if (!rows.length || !sampleData?.rows?.[0]) return [];
     return Object.keys(sampleData.rows[0]).map(key => ({
         id: key,

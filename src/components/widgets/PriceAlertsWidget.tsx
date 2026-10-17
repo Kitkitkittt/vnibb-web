@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useSyncExternalStore } from 'react';
 import { Bell, Plus, X, ArrowUp, ArrowDown, Check, Percent, BellOff, BellRing, Trash2, ToggleLeft, ToggleRight } from 'lucide-react';
 import { API_BASE_URL } from '@/lib/api';
 
@@ -159,27 +159,29 @@ function formatThreshold(alert: PriceAlert): string {
 
 // ============ Component ============
 
-export function PriceAlertsWidget({ symbol: initialSymbol }: PriceAlertsWidgetProps) {
-    const [alerts, setAlerts] = useState<PriceAlert[]>([]);
+const subscribeToHydration = () => () => {};
+
+export function PriceAlertsWidget(props: PriceAlertsWidgetProps) {
+    const hydrated = useSyncExternalStore(subscribeToHydration, () => true, () => false);
+    return hydrated ? <PriceAlertsSession {...props} /> : null;
+}
+
+function PriceAlertsSession({ symbol: initialSymbol }: PriceAlertsWidgetProps) {
+    const [alerts, setAlerts] = useState<PriceAlert[]>(loadAlerts);
     const [showAdd, setShowAdd] = useState(false);
-    const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
+    const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>(() => NotificationService.getInstance().getPermission());
     const [newAlert, setNewAlert] = useState({
         symbol: initialSymbol || '',
         condition: 'above' as PriceAlert['condition'],
         threshold: '',
     });
-    const [wsConnected, setWsConnected] = useState(false);
+    const [connectionOpen, setWsConnected] = useState(false);
 
     const wsRef = useRef<WebSocket | null>(null);
     const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const priceCacheRef = useRef<Record<string, number>>({});
     const notificationServiceRef = useRef(NotificationService.getInstance());
 
-    // Load alerts and check permission on mount
-    useEffect(() => {
-        setAlerts(loadAlerts());
-        setNotificationPermission(notificationServiceRef.current.getPermission());
-    }, []);
 
     // Save alerts when they change
     useEffect(() => {
@@ -192,6 +194,7 @@ export function PriceAlertsWidget({ symbol: initialSymbol }: PriceAlertsWidgetPr
     const activeSymbols = [...new Set(
         alerts.filter(a => a.isActive && !a.triggeredAt).map(a => a.symbol)
     )];
+    const wsConnected = activeSymbols.length > 0 && connectionOpen;
 
     // WebSocket connection for real-time price updates
     useEffect(() => {
@@ -201,7 +204,6 @@ export function PriceAlertsWidget({ symbol: initialSymbol }: PriceAlertsWidgetPr
                 wsRef.current.close();
                 wsRef.current = null;
             }
-            setWsConnected(false);
             return;
         }
 

@@ -9,6 +9,7 @@ import {
     Newspaper, PieChart, Info, LayoutGrid, Layers,
     Plus
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface WidgetLibrarySidebarProps {
@@ -16,7 +17,7 @@ interface WidgetLibrarySidebarProps {
     onClose: () => void;
 }
 
-const CATEGORY_ICONS: Record<string, any> = {
+const CATEGORY_ICONS: Record<string, LucideIcon> = {
   'core_data': BarChart3,
   'financials': DollarSign,
   'charting': TrendingUp,
@@ -45,10 +46,10 @@ export function WidgetLibrarySidebar({ isOpen, onClose }: WidgetLibrarySidebarPr
         })).filter(cat => cat.widgets.length > 0);
     }, [searchQuery]);
 
-    const handleAddWidget = (widgetDef: any) => {
+    const handleAddWidget = (widgetDef: (typeof widgetDefinitions)[number]) => {
         if (!activeDashboard || !activeTab) return;
 
-        let yOffset = activeTab.widgets.reduce((max, w) => Math.max(max, w.layout.y + w.layout.h), 0);
+        const yOffset = activeTab.widgets.reduce((max, w) => Math.max(max, w.layout.y + w.layout.h), 0);
 
         addWidget(activeDashboard.id, activeTab.id, {
             type: widgetDef.type,

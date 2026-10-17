@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useMemo, useEffect, useSyncExternalStore } from 'react';
 import { Sidebar, Header, TabBar, RightSidebar, MobileNav } from '@/components/layout';
 import { ResponsiveDashboardGrid, type LayoutItem } from '@/components/layout/DashboardGrid';
 import { useDashboard } from '@/contexts/DashboardContext';
@@ -51,6 +51,9 @@ export default function DashboardPage() {
 }
 
 const RIGHT_SIDEBAR_WIDTH = 350;
+const subscribeToHydration = () => () => {};
+const clientSnapshot = () => true;
+const serverSnapshot = () => false;
 
 function DashboardContent() {
     const {
@@ -74,22 +77,15 @@ function DashboardContent() {
     const [isTemplateSelectorOpen, setIsTemplateSelectorOpen] = useState(false);
     const [showAICopilot, setShowAICopilot] = useState(false);
     const [sidebarWidth, setSidebarWidth] = useState(208);
-    const [mounted, setMounted] = useState(false);
-
-    const updateSidebarWidth = useCallback(() => {
-        if (typeof window !== 'undefined') {
-            const sidebar = document.querySelector('aside');
-            const sidebarW = sidebar?.clientWidth || 208;
-            setSidebarWidth(sidebarW);
-        }
-    }, []);
+    const mounted = useSyncExternalStore(subscribeToHydration, clientSnapshot, serverSnapshot);
 
     useEffect(() => {
-        setMounted(true);
-        updateSidebarWidth();
-        window.addEventListener('resize', updateSidebarWidth);
-        return () => window.removeEventListener('resize', updateSidebarWidth);
-    }, [updateSidebarWidth]);
+        const sidebar = document.querySelector('aside');
+        if (!sidebar) return;
+        const observer = new ResizeObserver(() => setSidebarWidth(sidebar.clientWidth || 208));
+        observer.observe(sidebar);
+        return () => observer.disconnect();
+    }, [mounted]);
 
     const handleLayoutChange = useCallback((newLayout: LayoutItem[]) => {
         if (!activeDashboard || !activeTab) return;
@@ -155,7 +151,7 @@ function DashboardContent() {
             minW: w.layout.minW ?? 4,
             minH: w.layout.minH ?? 3,
         }));
-    }, [activeTab?.widgets]);
+    }, [activeTab]);
 
     const getWidgetParameters = useCallback((
         widget: WidgetInstance,

@@ -29,11 +29,11 @@ export function WidgetSkeleton({ lines = 3, variant = 'default' }: WidgetSkeleto
                 <div key={i} className="space-y-2">
                     <div
                         className="h-3 bg-gray-800/60 rounded"
-                        style={{ width: `${Math.random() * 30 + 60}%` }}
+                        style={{ width: `${60 + (i * 17) % 30}%` }}
                     />
                     <div
                         className="h-2 bg-gray-800/40 rounded"
-                        style={{ width: `${Math.random() * 20 + 40}%` }}
+                        style={{ width: `${40 + (i * 13) % 20}%` }}
                     />
                 </div>
             ))}
@@ -83,7 +83,7 @@ export function ChartSkeleton() {
                     <div
                         key={i}
                         className="bg-gray-800/50 rounded-t w-full"
-                        style={{ height: `${Math.random() * 60 + 20}%` }}
+                        style={{ height: `${20 + (i * 19) % 60}%` }}
                     />
                 ))}
             </div>
