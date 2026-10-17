@@ -16,7 +16,7 @@ export type WebSocketStatus = 'connecting' | 'connected' | 'disconnected' | 'err
 
 interface UseWebSocketOptions {
     url: string;
-    onMessage?: (data: any) => void;
+    onMessage?: (data: unknown) => void;
     onOpen?: () => void;
     onClose?: () => void;
     onError?: (error: Event) => void;
@@ -29,7 +29,7 @@ interface UseWebSocketOptions {
 interface UseWebSocketReturn {
     status: WebSocketStatus;
     isConnected: boolean;
-    send: (data: any) => void;
+    send: (data: unknown) => void;
     connect: () => void;
     disconnect: () => void;
     reconnectCount: number;
@@ -51,7 +51,7 @@ export function useWebSocket({
 
     const wsRef = useRef<WebSocket | null>(null);
     const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-    const messageQueueRef = useRef<any[]>([]);
+    const messageQueueRef = useRef<unknown[]>([]);
 
     // Calculate backoff delay with exponential increase
     const getBackoffDelay = useCallback((attempt: number): number => {
@@ -85,7 +85,7 @@ export function useWebSocket({
     }, [clearReconnectTimeout]);
 
     // Connect to WebSocket
-    const connect = useCallback(() => {
+    const connect = useCallback(function connect() {
         // Don't connect if already connected or connecting
         if (wsRef.current?.readyState === WebSocket.OPEN ||
             wsRef.current?.readyState === WebSocket.CONNECTING) {
@@ -151,7 +151,7 @@ export function useWebSocket({
     }, [url, onMessage, onOpen, onClose, onError, reconnect, reconnectAttempts, reconnectCount, getBackoffDelay, clearReconnectTimeout]);
 
     // Send message (queue if not connected)
-    const send = useCallback((data: any) => {
+    const send = useCallback((data: unknown) => {
         if (wsRef.current?.readyState === WebSocket.OPEN) {
             wsRef.current.send(JSON.stringify(data));
         } else if (reconnect) {

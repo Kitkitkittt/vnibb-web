@@ -64,10 +64,11 @@ export function useWebSocket({
     const symbolsRef = useRef<string[]>(symbols);
     const previousPricesRef = useRef<Map<string, number>>(new Map());
 
-    // Update symbols ref
-    symbolsRef.current = symbols;
+    useEffect(() => {
+        symbolsRef.current = symbols;
+    }, [symbols]);
 
-    const connect = useCallback(() => {
+    const connect = useCallback(function connect() {
         if (!enabled || symbols.length === 0) return;
 
         try {

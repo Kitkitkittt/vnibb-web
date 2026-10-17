@@ -82,9 +82,9 @@ function AIAnalysisWidgetComponent({ id, symbol, onRemove }: AIAnalysisWidgetPro
           }
         }
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('AI Analysis Error:', err);
-      setError(err.message || 'Analysis failed');
+      setError(err instanceof Error ? err.message : 'Analysis failed');
     } finally {
       setIsLoading(false);
     }

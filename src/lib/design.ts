@@ -10,7 +10,7 @@ export function getColor(
   if (color === 'chart') {
     return tokens.colors.chart.blue;
   }
-  return (tokens.colors[color] as any)[variant];
+  return tokens.colors[color][variant];
 }
 
 /**

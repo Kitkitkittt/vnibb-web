@@ -1,7 +1,7 @@
 // Widget Settings Modal
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { X, Save, RotateCcw } from 'lucide-react';
 import { useDashboard } from '@/contexts/DashboardContext';
 import type { WidgetInstance } from '@/types/dashboard';
@@ -14,54 +14,56 @@ interface WidgetSettingsModalProps {
     tabId: string | null;
 }
 
-export function WidgetSettingsModal({
-    isOpen,
-    onClose,
-    widgetId,
-    dashboardId,
-    tabId
-}: WidgetSettingsModalProps) {
-    const { state, updateWidget } = useDashboard();
-    const [config, setConfig] = useState<string>('{}');
-    const [refreshInterval, setRefreshInterval] = useState<number>(0);
-    const [error, setError] = useState<string | null>(null);
-
-    const widget = (dashboardId && tabId && widgetId)
-        ? state.dashboards.find(d => d.id === dashboardId)
-            ?.tabs.find(t => t.id === tabId)
-            ?.widgets.find(w => w.id === widgetId)
+export function WidgetSettingsModal({ isOpen, onClose, widgetId, dashboardId, tabId }: WidgetSettingsModalProps) {
+    const { state } = useDashboard();
+    const widget = isOpen && dashboardId && tabId && widgetId
+        ? state.dashboards.find(d => d.id === dashboardId)?.tabs.find(t => t.id === tabId)?.widgets.find(w => w.id === widgetId) ?? null
         : null;
 
-    useEffect(() => {
-        if (isOpen && widget) {
-            // Initialize form state
-            setRefreshInterval(widget.config.refreshInterval || 0);
+    if (!widget || !dashboardId || !tabId || !widgetId) return null;
 
-            // For other config, stringify it generally or handle specific fields
-            // We'll exclude known fields from the JSON editor if we map them explicitly
-            const { refreshInterval: _, ...otherConfig } = widget.config;
-            setConfig(JSON.stringify(otherConfig, null, 2));
-        }
-    }, [isOpen, widget]);
+    return (
+        <WidgetSettingsEditor
+            key={`${dashboardId}:${tabId}:${widgetId}`}
+            widget={widget}
+            dashboardId={dashboardId}
+            tabId={tabId}
+            onClose={onClose}
+        />
+    );
+}
+
+function WidgetSettingsEditor({ widget, dashboardId, tabId, onClose }: {
+    widget: WidgetInstance;
+    dashboardId: string;
+    tabId: string;
+    onClose: () => void;
+}) {
+    const { updateWidget } = useDashboard();
+    const [config, setConfig] = useState(() => {
+        const { refreshInterval: _, ...otherConfig } = widget.config;
+        return JSON.stringify(otherConfig, null, 2);
+    });
+    const [refreshInterval, setRefreshInterval] = useState(widget.config.refreshInterval || 0);
+    const [error, setError] = useState<string | null>(null);
 
     const handleSave = () => {
-        if (!widget || !dashboardId || !tabId || !widgetId) return;
-
         try {
-            const parsedConfig = JSON.parse(config);
-            const newConfig = {
-                ...parsedConfig,
+            const parsedConfig: unknown = JSON.parse(config);
+            if (typeof parsedConfig !== 'object' || parsedConfig === null || Array.isArray(parsedConfig)) {
+                setError('Configuration must be a JSON object');
+                return;
+            }
+            const newConfig: WidgetInstance['config'] = {
+                ...(parsedConfig as WidgetInstance['config']),
                 refreshInterval: refreshInterval > 0 ? refreshInterval : undefined
             };
-
-            updateWidget(dashboardId, tabId, widgetId, { config: newConfig });
+            updateWidget(dashboardId, tabId, widget.id, { config: newConfig });
             onClose();
-        } catch (e) {
+        } catch {
             setError('Invalid JSON configuration');
         }
     };
-
-    if (!isOpen || !widget) return null;
 
     return (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">

@@ -1,6 +1,7 @@
 'use client';
 
 import { useScreenerData } from '@/lib/queries';
+import type { ScreenerData } from '@/types/screener';
 import { formatRatio, formatPercent, formatVND } from '@/lib/formatters';
 import { WidgetSkeleton } from '@/components/ui/widget-skeleton';
 import { WidgetError, WidgetEmpty } from '@/components/ui/widget-states';
@@ -17,7 +18,7 @@ import {
 
 interface ValuationWidgetProps {
   symbol: string;
-  onDataChange?: (data: any) => void;
+  onDataChange?: (data: ScreenerData[]) => void;
 }
 
 export function ValuationWidget({ symbol, onDataChange }: ValuationWidgetProps) {

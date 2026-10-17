@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useSyncExternalStore } from 'react';
 import { X, Search, Plus, Trash2, MessageSquare, TrendingUp, BarChart, FileText, Sparkles } from 'lucide-react';
 
 interface Prompt {
@@ -72,6 +72,38 @@ const CATEGORY_COLORS: Record<string, string> = {
     custom: '#F59E0B',
 };
 
+const PROMPTS_STORAGE_KEY = 'vnibb-prompts';
+let cachedPromptsRaw: string | null = null;
+let cachedPrompts: Prompt[] = DEFAULT_PROMPTS;
+
+function subscribeToPrompts(onStoreChange: () => void) {
+    window.addEventListener('storage', onStoreChange);
+    window.addEventListener('prompts-change', onStoreChange);
+    return () => {
+        window.removeEventListener('storage', onStoreChange);
+        window.removeEventListener('prompts-change', onStoreChange);
+    };
+}
+
+function getPromptsSnapshot(): Prompt[] {
+    try {
+        const raw = localStorage.getItem(PROMPTS_STORAGE_KEY);
+        if (raw === cachedPromptsRaw) return cachedPrompts;
+        cachedPromptsRaw = raw;
+        if (!raw) return cachedPrompts = DEFAULT_PROMPTS;
+        const parsed: unknown = JSON.parse(raw);
+        cachedPrompts = Array.isArray(parsed) ? parsed.filter((prompt): prompt is Prompt =>
+            typeof prompt === 'object' && prompt !== null && typeof prompt.id === 'string' &&
+            typeof prompt.name === 'string' && typeof prompt.content === 'string' &&
+            ['analysis', 'comparison', 'fundamentals', 'custom'].includes(prompt.category)
+        ) : DEFAULT_PROMPTS;
+    } catch {
+        return cachedPrompts;
+    }
+    return cachedPrompts;
+}
+
+
 interface PromptsLibraryProps {
     isOpen: boolean;
     onClose: () => void;
@@ -79,28 +111,33 @@ interface PromptsLibraryProps {
 }
 
 export function PromptsLibrary({ isOpen, onClose, onSelectPrompt }: PromptsLibraryProps) {
-    const [prompts, setPrompts] = useState<Prompt[]>([]);
+    const prompts = useSyncExternalStore(subscribeToPrompts, getPromptsSnapshot, () => DEFAULT_PROMPTS);
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedCategory, setSelectedCategory] = useState<'all' | Prompt['category']>('all');
     const [isAddingNew, setIsAddingNew] = useState(false);
     const [newPromptName, setNewPromptName] = useState('');
     const [newPromptContent, setNewPromptContent] = useState('');
 
-    // Load prompts from localStorage on mount
     useEffect(() => {
-        const stored = localStorage.getItem('vnibb-prompts');
-        if (stored) {
-            setPrompts(JSON.parse(stored));
-        } else {
-            setPrompts(DEFAULT_PROMPTS);
-            localStorage.setItem('vnibb-prompts', JSON.stringify(DEFAULT_PROMPTS));
+        try {
+            if (typeof window !== 'undefined' && localStorage.getItem(PROMPTS_STORAGE_KEY) === null) {
+                localStorage.setItem(PROMPTS_STORAGE_KEY, JSON.stringify(DEFAULT_PROMPTS));
+            }
+        } catch {
+            // Storage is optional; the in-memory defaults remain available.
         }
     }, []);
 
-    // Save prompts to localStorage
     const savePrompts = (newPrompts: Prompt[]) => {
-        setPrompts(newPrompts);
-        localStorage.setItem('vnibb-prompts', JSON.stringify(newPrompts));
+        const raw = JSON.stringify(newPrompts);
+        getPromptsSnapshot();
+        cachedPrompts = newPrompts;
+        try {
+            localStorage.setItem(PROMPTS_STORAGE_KEY, raw);
+            cachedPromptsRaw = raw;
+        } finally {
+            window.dispatchEvent(new Event('prompts-change'));
+        }
     };
 
     const handleAddPrompt = () => {
@@ -277,6 +314,7 @@ export function PromptsLibrary({ isOpen, onClose, onSelectPrompt }: PromptsLibra
                                 {/* Delete Button (only for custom prompts) */}
                                 {!prompt.isDefault && (
                                     <button
+                                        aria-label={`Delete ${prompt.name}`}
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             handleDeletePrompt(prompt.id);

@@ -11,7 +11,7 @@ export function useDataExport() {
     URL.revokeObjectURL(url);
   }, []);
 
-  const exportToCSV = useCallback((data: any[], filename: string) => {
+  const exportToCSV = useCallback((data: object[], filename: string) => {
     if (!data || data.length === 0) return;
     
     const headers = Object.keys(data[0]);
@@ -19,7 +19,7 @@ export function useDataExport() {
       headers.join(','),
       ...data.map(row => 
         headers.map(h => {
-          const val = row[h];
+          const val = (row as Record<string, unknown>)[h];
           if (typeof val === 'string' && (val.includes(',') || val.includes('"'))) {
             return `"${val.replace(/"/g, '""')}"`;
           }
@@ -31,7 +31,7 @@ export function useDataExport() {
     downloadFile(csv, `${filename}.csv`, 'text/csv');
   }, [downloadFile]);
 
-  const exportToJSON = useCallback((data: any, filename: string) => {
+  const exportToJSON = useCallback((data: object | object[], filename: string) => {
     const json = JSON.stringify(data, null, 2);
     downloadFile(json, `${filename}.json`, 'application/json');
   }, [downloadFile]);

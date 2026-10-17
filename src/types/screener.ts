@@ -5,6 +5,10 @@ export interface ScreenerData {
     ticker: string;
 
     company_name?: string;
+    organ_name?: string;
+    industry_name?: string;
+    eps?: number;
+    priceHistory?: { date: string; close: number }[];
     exchange?: string;
     industry?: string;
     price?: number;
@@ -48,6 +52,15 @@ export interface ScreenerResponse {
     data: ScreenerData[];
 }
 
+export interface NumericFilterValue {
+    gte?: number;
+    gt?: number;
+    lt?: number;
+    eq?: number;
+}
+
+export type ScreenerFilterValue = NumericFilterValue | string | null;
+
 export interface ScreenerColumn {
   id: string;
   label: string;
@@ -70,9 +83,9 @@ export interface ColumnPreset {
 export const ALL_COLUMNS: ScreenerColumn[] = [
   // Basic
   { id: 'ticker', label: 'Symbol', accessor: 'ticker', category: 'basic', align: 'left' },
-  { id: 'organ_name', label: 'Company', accessor: 'organ_name' as any, category: 'basic', align: 'left', width: 200 },
+  { id: 'organ_name', label: 'Company', accessor: 'organ_name', category: 'basic', align: 'left', width: 200 },
   { id: 'exchange', label: 'Exchange', accessor: 'exchange', category: 'basic' },
-  { id: 'industry_name', label: 'Industry', accessor: 'industry_name' as any, category: 'basic' },
+  { id: 'industry_name', label: 'Industry', accessor: 'industry_name', category: 'basic' },
   
   // Valuation
   { id: 'market_cap', label: 'Market Cap', accessor: 'market_cap', category: 'valuation', format: 'currency' },
@@ -82,7 +95,7 @@ export const ALL_COLUMNS: ScreenerColumn[] = [
   { id: 'ev_ebitda', label: 'EV/EBITDA', accessor: 'ev_ebitda', category: 'valuation', format: 'number' },
   
   // Fundamentals
-  { id: 'eps', label: 'EPS', accessor: 'eps' as any, category: 'fundamentals', format: 'number' },
+  { id: 'eps', label: 'EPS', accessor: 'eps', category: 'fundamentals', format: 'number' },
   { id: 'roe', label: 'ROE', accessor: 'roe', category: 'fundamentals', format: 'percent' },
   { id: 'roa', label: 'ROA', accessor: 'roa', category: 'fundamentals', format: 'percent' },
   { id: 'net_margin', label: 'Net Margin', accessor: 'net_margin', category: 'fundamentals', format: 'percent' },

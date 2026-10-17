@@ -50,7 +50,7 @@ function ForeignTradingWidgetComponent({ id, symbol, isEditing, onRemove }: Fore
         return { buy, sell, net: buy - sell };
     }, [trades]);
 
-    const columns = useMemo((): VirtualizedColumn<any>[] => [
+    const columns = useMemo((): VirtualizedColumn<(typeof trades)[number]>[] => [
         {
             id: 'date',
             header: 'Date',

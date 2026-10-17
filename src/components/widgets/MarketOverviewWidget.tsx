@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { BarChart2, RefreshCw, TrendingUp, TrendingDown, ArrowUp, ArrowDown, Minus, Clock, AlertCircle } from 'lucide-react';
 import { useMarketOverview } from '@/lib/queries';
 import { WidgetContainer } from '@/components/ui/WidgetContainer';
@@ -28,18 +28,22 @@ const MOCK_STATS: Record<string, { up: number; down: number; flat: number }> = {
     'UPCOM': { up: 120, down: 98, flat: 45 },
 };
 
+const subscribeToHydration = () => () => {};
+
 export function MarketOverviewWidget({ id, isEditing, onRemove, lastRefresh }: MarketOverviewWidgetProps & { id?: string, lastRefresh?: number }) {
     const { data, isLoading, isError, refetch, isRefetching } = useMarketOverview();
-    const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+    const [lastUpdated, setLastUpdated] = useState(() => new Date());
+    const [previousRefresh, setPreviousRefresh] = useState(lastRefresh);
+    const hydrated = useSyncExternalStore(subscribeToHydration, () => true, () => false);
 
-    useEffect(() => {
-        setLastUpdated(new Date());
-    }, []);
+    if (previousRefresh !== lastRefresh) {
+        setPreviousRefresh(lastRefresh);
+        if (lastRefresh) setLastUpdated(new Date());
+    }
 
     useEffect(() => {
         if (lastRefresh) {
             refetch();
-            setLastUpdated(new Date());
         }
     }, [lastRefresh, refetch]);
 
@@ -132,7 +136,7 @@ export function MarketOverviewWidget({ id, isEditing, onRemove, lastRefresh }: M
 
                 <div className="flex items-center gap-1 px-2 py-1 border-t border-gray-800 text-[10px] text-gray-500">
                     <Clock size={10} />
-                    <span suppressHydrationWarning>Updated {lastUpdated?.toLocaleTimeString() ?? '--:--:--'}</span>
+                    <span>Updated {hydrated ? lastUpdated.toLocaleTimeString() : '--:--:--'}</span>
                 </div>
             </div>
         </WidgetContainer>

@@ -15,8 +15,7 @@ export const Tooltip = ({ children }: { children: React.ReactNode }) => {
             onMouseLeave={() => setIsVisible(false)}
         >
             {React.Children.map(children, child => {
-                if (React.isValidElement(child)) {
-                    // @ts-ignore
+                if (React.isValidElement<{ isVisible?: boolean }>(child)) {
                     return React.cloneElement(child, { isVisible });
                 }
                 return child;
@@ -25,11 +24,22 @@ export const Tooltip = ({ children }: { children: React.ReactNode }) => {
     );
 };
 
-export const TooltipTrigger = ({ children, asChild }: any) => {
+interface TooltipTriggerProps {
+    children: React.ReactNode;
+    asChild?: boolean;
+}
+
+interface TooltipContentProps {
+    children: React.ReactNode;
+    isVisible?: boolean;
+    className?: string;
+}
+
+export const TooltipTrigger = ({ children }: TooltipTriggerProps) => {
     return <>{children}</>;
 };
 
-export const TooltipContent = ({ children, isVisible, className }: any) => {
+export const TooltipContent = ({ children, isVisible, className }: TooltipContentProps) => {
     if (!isVisible) return null;
     return (
         <div className={cn(

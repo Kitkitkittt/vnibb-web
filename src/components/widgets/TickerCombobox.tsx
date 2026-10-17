@@ -13,12 +13,15 @@ interface TickerComboboxProps {
     onSelect: (symbol: string) => void;
 }
 
-export function TickerCombobox({
-    isOpen,
+export function TickerCombobox({ isOpen, ...props }: TickerComboboxProps) {
+    return isOpen ? <TickerComboboxEditor {...props} /> : null;
+}
+
+function TickerComboboxEditor({
     onClose,
     currentSymbol,
     onSelect,
-}: TickerComboboxProps) {
+}: Omit<TickerComboboxProps, 'isOpen'>) {
     const [query, setQuery] = useState('');
     const [selectedIndex, setSelectedIndex] = useState(0);
     const inputRef = useRef<HTMLInputElement>(null);
@@ -27,22 +30,16 @@ export function TickerCombobox({
     // Get filtered results
     const results = searchStocks(query, 8);
 
-    // Focus input and reset state when opened
+    // Focus after the editor has mounted.
     useEffect(() => {
-        if (isOpen) {
-            setQuery('');
-            setSelectedIndex(0);
-            // Small delay to ensure the element is rendered
-            setTimeout(() => {
-                inputRef.current?.focus();
-            }, 10);
-        }
-    }, [isOpen]);
+        const timer = setTimeout(() => {
+            inputRef.current?.focus();
+        }, 10);
+        return () => clearTimeout(timer);
+    }, []);
 
     // Handle click outside to close
     useEffect(() => {
-        if (!isOpen) return;
-
         const handleClickOutside = (e: MouseEvent) => {
             if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
                 onClose();
@@ -58,7 +55,7 @@ export function TickerCombobox({
             clearTimeout(timer);
             document.removeEventListener('mousedown', handleClickOutside);
         };
-    }, [isOpen, onClose]);
+    }, [onClose]);
 
     // Keyboard navigation
     const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
@@ -94,8 +91,6 @@ export function TickerCombobox({
         onClose();
     };
 
-    if (!isOpen) return null;
-
     return (
         <div
             ref={containerRef}
@@ -130,7 +125,7 @@ export function TickerCombobox({
                 {/* Results List */}
                 {results.length === 0 ? (
                     <div className="px-3 py-4 text-center text-gray-500 text-xs">
-                        No results for "{query}"
+                        No results for &quot;{query}&quot;
                     </div>
                 ) : (
                     <div className="pb-1">

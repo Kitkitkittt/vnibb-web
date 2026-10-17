@@ -6,8 +6,20 @@ import { useQuery } from '@tanstack/react-query';
 import { TrendingUp, TrendingDown, RefreshCw, Wifi, WifiOff } from 'lucide-react';
 import * as api from '@/lib/api';
 import { useWebSocket } from '@/lib/hooks/useWebSocket';
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo } from 'react';
 import { cn } from '@/lib/utils';
+
+import type { MarketIndexData } from '@/types/equity';
+
+type MarketRibbonIndex = MarketIndexData & {
+    symbol?: string;
+    index_code?: string;
+    price?: number;
+    close?: number;
+    pct_change?: number;
+    changePct?: number;
+    direction?: 'up' | 'down' | 'unchanged';
+};
 
 interface IndexData {
     symbol: string;
@@ -57,33 +69,21 @@ export function MarketRibbon() {
     const indexSymbols = useMemo(() => ["VNINDEX", "VN30", "HNXINDEX", "UPCOMINDEX", "VN-INDEX", "HNX-INDEX"], []);
     const { prices: livePrices, isConnected } = useWebSocket({ symbols: indexSymbols });
 
-    const [mergedData, setMergedData] = useState<Record<string, any>>({});
-
-    useEffect(() => {
-        if (initialData?.data) {
-            const initialMap: Record<string, any> = {};
-            initialData.data.forEach((item: any) => {
-                initialMap[getSymbol(item)] = item;
-            });
-            setMergedData(prev => ({ ...initialMap, ...prev }));
-        }
-    }, [initialData]);
-
-    useEffect(() => {
-        if (livePrices.size > 0) {
-            const updates: Record<string, any> = {};
-            livePrices.forEach((val, key) => {
-                updates[key] = {
-                    ...mergedData[key],
-                    price: val.price,
-                    change: val.change,
-                    change_pct: val.change_pct,
-                    direction: val.direction
-                };
-            });
-            setMergedData(prev => ({ ...prev, ...updates }));
-        }
-    }, [livePrices]);
+    const mergedData = useMemo(() => {
+        const data: Record<string, MarketRibbonIndex> = {};
+        initialData?.data.forEach(item => { data[getSymbol(item)] = item; });
+        livePrices.forEach((value, symbol) => {
+            data[symbol] = {
+                ...data[symbol],
+                symbol: value.symbol,
+                price: value.price,
+                change: value.change ?? data[symbol]?.change,
+                change_pct: value.change_pct ?? data[symbol]?.change_pct,
+                direction: value.direction ?? data[symbol]?.direction,
+            };
+        });
+        return data;
+    }, [initialData, livePrices]);
 
     const vnindex = mergedData['VNINDEX'] || mergedData['VN-INDEX'];
     const hnxindex = mergedData['HNXINDEX'] || mergedData['HNX-INDEX'];
@@ -158,19 +158,19 @@ export function MarketRibbon() {
 }
 
 // Helper functions for data extraction
-function getPrice(item: any): number {
+function getPrice(item: MarketRibbonIndex): number {
     return (item.price || item.current_value || item.close || 0);
 }
 
-function getChange(item: any): number {
+function getChange(item: MarketRibbonIndex): number {
     return (item.change || 0);
 }
 
-function getChangePct(item: any): number {
+function getChangePct(item: MarketRibbonIndex): number {
     return (item.change_pct || item.pct_change || item.changePct || 0);
 }
 
-function getSymbol(item: any): string {
+function getSymbol(item: MarketRibbonIndex): string {
     return (item.symbol || item.index_name || item.index_code || '');
 }
 

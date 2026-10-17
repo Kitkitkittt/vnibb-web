@@ -3,13 +3,14 @@
 import { CompanyLogo } from '@/components/ui/CompanyLogo';
 import { MiniChart } from '@/components/ui/MiniChart';
 import { cn } from '@/lib/utils';
+import { formatScreenerValue } from '@/utils/formatters';
 
 export interface ChartGridCardProps {
   symbol: string;
   name: string;
-  price: number;
-  change: number;
-  changePercent: number;
+  price?: number;
+  change?: number;
+  changePercent?: number;
   priceHistory?: { date: string; close: number }[];
   onClick?: () => void;
 }
@@ -23,7 +24,7 @@ export function ChartGridCard({
   priceHistory = [],
   onClick,
 }: ChartGridCardProps) {
-  const isPositive = changePercent >= 0;
+  const isPositive = changePercent != null && changePercent >= 0;
 
   return (
     <div
@@ -47,13 +48,13 @@ export function ChartGridCard({
       {/* Price + Change */}
       <div className="flex items-baseline justify-between pt-1 border-t border-gray-800/20">
         <span className="text-sm font-mono font-bold text-gray-100">
-          {price.toLocaleString()}
+          {formatScreenerValue(price, 'number')}
         </span>
         <span className={cn(
             "text-[10px] font-black px-1.5 py-0.5 rounded",
             isPositive ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'
         )}>
-          {isPositive ? '▲' : '▼'}{Math.abs(changePercent).toFixed(2)}%
+          {changePercent == null ? '—' : `${isPositive ? '▲' : '▼'}${Math.abs(changePercent).toFixed(2)}%`}
         </span>
       </div>
     </div>

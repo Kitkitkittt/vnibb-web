@@ -2,7 +2,7 @@
 
 'use client';
 
-import React, { useState, useEffect, type ReactNode } from 'react';
+import React, { useState, useCallback, type ReactNode } from 'react';
 import {
     Download,
     FileJson,
@@ -54,6 +54,14 @@ export interface WidgetMultiSelectParam {
     onChange: (values: string[]) => void;
 }
 
+interface WrappedWidgetProps {
+    id?: string;
+    symbol?: string;
+    widgetGroup?: WidgetGroupId;
+    hideHeader?: boolean;
+    onDataChange?: (data: object | object[]) => void;
+}
+
 export interface WidgetWrapperProps {
     id: string; // Widget Instance ID
     title: string;
@@ -69,7 +77,7 @@ export interface WidgetWrapperProps {
     showGroupLabels?: boolean; // Controls visibility of sync badge
     parameters?: WidgetParameter[]; // Inline parameter controls (OpenBB-style)
     multiSelectParams?: WidgetMultiSelectParam[]; // Multi-select params (for indicators)
-    data?: any; // Data for export (CSV/JSON)
+    data?: object | object[]; // Data for export (CSV/JSON)
     onRemove?: () => void;
 
     onMaximize?: () => void;
@@ -106,18 +114,21 @@ export function WidgetWrapper({
     const { getColorForGroup, getSymbolForGroup, groups, setGroupSymbol } = useWidgetGroups();
     const [isMaximized, setIsMaximized] = useState(false);
     const [isTickerDropdownOpen, setIsTickerDropdownOpen] = useState(false);
-    const [widgetGroup, setWidgetGroup] = useState<WidgetGroupId>(initialWidgetGroup);
-    const [internalData, setInternalData] = useState<any>(widgetData);
+    const [groupState, setGroupState] = useState({ source: initialWidgetGroup, value: initialWidgetGroup });
+    const [dataState, setDataState] = useState({ source: widgetData, value: widgetData });
 
-    // Sync widgetGroup state when prop changes
-    useEffect(() => {
-        setWidgetGroup(initialWidgetGroup);
-    }, [initialWidgetGroup]);
+    if (groupState.source !== initialWidgetGroup) {
+        setGroupState({ source: initialWidgetGroup, value: initialWidgetGroup });
+    }
+    if (dataState.source !== widgetData) {
+        setDataState({ source: widgetData, value: widgetData ?? dataState.value });
+    }
 
-    // Sync internal data with prop if provided
-    useEffect(() => {
-        if (widgetData) setInternalData(widgetData);
-    }, [widgetData]);
+    const widgetGroup = groupState.source === initialWidgetGroup ? groupState.value : initialWidgetGroup;
+    const internalData = dataState.source === widgetData ? dataState.value : (widgetData ?? dataState.value);
+    const setInternalData = useCallback((data: object | object[]) => {
+        setDataState(previous => ({ ...previous, value: data }));
+    }, []);
 
     // Get current group details if assigned
     const effectiveSymbol = getSymbolForGroup(widgetGroup);
@@ -143,7 +154,7 @@ export function WidgetWrapper({
 
 
     const handleGroupChange = (newGroup: WidgetGroupId) => {
-        setWidgetGroup(newGroup);
+        setGroupState({ source: initialWidgetGroup, value: newGroup });
         // Persist to dashboard state
         updateWidget(dashboardId, tabId, id, { widgetGroup: newGroup });
         
@@ -320,8 +331,8 @@ export function WidgetWrapper({
                     <WidgetErrorBoundary
                         onError={(error) => console.error(`Widget ${id} (${title}) crashed:`, error)}
                     >
-                        {React.isValidElement(children) 
-                            ? React.cloneElement(children as React.ReactElement<any>, { 
+                        {React.isValidElement<WrappedWidgetProps>(children)
+                            ? React.cloneElement(children, {
                                 id: id,
                                 symbol: displaySymbol,
                                 widgetGroup,
@@ -343,8 +354,8 @@ export function WidgetWrapper({
                 <WidgetErrorBoundary
                     onError={(error) => console.error(`Maximized Widget ${id} (${title}) crashed:`, error)}
                 >
-                    {React.isValidElement(children) 
-                        ? React.cloneElement(children as React.ReactElement<any>, { 
+                    {React.isValidElement<WrappedWidgetProps>(children)
+                        ? React.cloneElement(children, {
                             symbol: displaySymbol,
                             widgetGroup,
                             onDataChange: setInternalData

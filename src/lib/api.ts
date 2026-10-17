@@ -119,11 +119,11 @@ async function fetchAPI<T>(endpoint: string, options: FetchOptions = {}): Promis
         }
 
         return response.json();
-    } catch (error: any) {
+    } catch (error: unknown) {
         clearTimeout(timeoutId);
 
         // Handle timeout
-        if (error.name === 'AbortError') {
+        if (error instanceof Error && error.name === 'AbortError') {
             const timeoutSec = Math.round(timeout / 1000);
             throw new APIError(
                 `Request timed out after ${timeoutSec} seconds. The server is slow or unavailable.`,
@@ -143,7 +143,7 @@ async function fetchAPI<T>(endpoint: string, options: FetchOptions = {}): Promis
         }
 
         // Generic fallback
-        throw new APIError(error.message || 'An unexpected error occurred', 0, 'UnknownError');
+        throw new APIError(error instanceof Error ? error.message : 'An unexpected error occurred', 0, 'UnknownError');
     }
 }
 
@@ -153,6 +153,21 @@ import type { EquityHistoricalResponse, EquityProfileResponse, CompanyNewsRespon
 import type { ScreenerResponse } from '@/types/screener';
 import type { Dashboard, DashboardCreate, DashboardUpdate, WidgetCreate } from '@/types/dashboard';
 import type { FullTechnicalAnalysis, SignalSummary, TechnicalIndicators } from '@/types/technical';
+export interface DashboardApiData {
+    id: number;
+    name: string;
+    description?: string;
+    is_default: boolean;
+    layout_config?: {
+        tabs?: Dashboard['tabs'];
+        syncGroups?: Dashboard['syncGroups'];
+        showGroupLabels?: boolean;
+        folderId?: string;
+        order?: number;
+    };
+    created_at?: string;
+    updated_at?: string;
+}
 import type {
     InsiderTrade,
     BlockTrade,
@@ -280,7 +295,7 @@ export async function getMetricsHistory(
     days: number = 30,
     metrics: string[] = ['roe', 'roa', 'pe_ratio']
 ): Promise<MetricsHistoryResponse> {
-    const params: Record<string, any> = { days };
+    const params: Record<string, string | number | boolean | undefined> = { days };
     // Note: our fetchAPI doesn't support array params directly yet, but we can join them or modify fetchAPI
     // The task suggests appending multiple times. Let's adjust params handling if needed.
     
@@ -373,7 +388,7 @@ export interface ScreenerFilterParams {
 
 export async function getScreenerData(options?: ScreenerFilterParams, signal?: AbortSignal): Promise<ScreenerResponse> {
     // Dynamically build params to include all options
-    const params: Record<string, any> = {};
+    const params: Record<string, string | number | boolean | undefined> = {};
     if (options) {
         Object.entries(options).forEach(([key, value]) => {
             if (value !== undefined) {
@@ -388,7 +403,7 @@ export async function getScreenerData(options?: ScreenerFilterParams, signal?: A
 
 // ============ Dashboard API ============
 
-export async function getDashboards(userId = 'anonymous'): Promise<{ count: number; data: Dashboard[] }> {
+export async function getDashboards(userId = 'anonymous'): Promise<{ count: number; data: DashboardApiData[] }> {
     return fetchAPI('/dashboards/', {
         params: { user_id: userId },
     });
@@ -1083,8 +1098,8 @@ export async function exportPeers(
 export async function getTechnicalIndicators(
     symbol: string,
     options?: { lookbackDays?: number }
-): Promise<any> {
-    return fetchAPI(`/analysis/ta/${symbol}`, { params: options });
+): Promise<TechnicalIndicators> {
+    return fetchAPI<TechnicalIndicators>(`/analysis/ta/${symbol}`, { params: options });
 }
 
 export async function getFullTechnicalAnalysis(
@@ -1097,8 +1112,8 @@ export async function getFullTechnicalAnalysis(
 export async function getTechnicalHistory(
     symbol: string,
     options?: { days?: number }
-): Promise<{ symbol: string; indicators: any[] }> {
-    return fetchAPI<{ symbol: string; indicators: any[] }>(`/analysis/ta/${symbol}/history`, { params: options });
+): Promise<{ symbol: string; indicators: unknown[] }> {
+    return fetchAPI<{ symbol: string; indicators: unknown[] }>(`/analysis/ta/${symbol}/history`, { params: options });
 }
 
 // ============ Market Heatmap API ============

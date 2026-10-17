@@ -1,18 +1,14 @@
 // Screener Widget - Sprint V11 Enhancement
 'use client';
 
-import { useState, useMemo, useCallback, useEffect, memo } from 'react';
-import {
-    Search, Filter, RefreshCw, Grid3X3, Table, LayoutGrid,
-    ChevronDown, Plus, Star, BarChart3, Settings2, Bookmark,
-    ArrowUpRight, ListFilter, LayoutPanelLeft, LineChart
-} from 'lucide-react';
+import { useState, useMemo, useCallback } from 'react';
+import { Search, RefreshCw, Table, LayoutGrid, ListFilter, LineChart } from 'lucide-react';
 import type { ScreenerData } from '@/types/screener';
-import { useScreenerData, useHistoricalPrices } from '@/lib/queries';
+import { useScreenerData } from '@/lib/queries';
 import { WidgetContainer } from '@/components/ui/WidgetContainer';
 import { VirtualizedTable, type VirtualizedColumn } from '@/components/ui/VirtualizedTable';
 import { useColumnPresets } from '@/hooks/useColumnPresets';
-import { ALL_COLUMNS, type ScreenerColumn } from '@/types/screener';
+import { ALL_COLUMNS } from '@/types/screener';
 import { formatScreenerValue } from '@/utils/formatters';
 import { MarketToggle, type Market } from './screener/MarketToggle';
 import { cn } from '@/lib/utils';
@@ -24,7 +20,6 @@ import { ColumnCustomizer } from './screener/ColumnCustomizer';
 import { SavedScreensDropdown, type SavedScreen } from './screener/SavedScreensDropdown';
 import { PerformanceTable } from './screener/PerformanceTable';
 import { ChartGridCard } from './screener/ChartGridCard';
-import { CompanyLogo } from '@/components/ui/CompanyLogo';
 
 interface ScreenerWidgetProps {
     id: string;
@@ -78,7 +73,7 @@ export function ScreenerWidget({
         // Apply search filter
         if (search) {
             const searchLower = search.toLowerCase();
-            result = result.filter((s: any) =>
+            result = result.filter(s =>
                 s.ticker?.toLowerCase().includes(searchLower) ||
                 s.organ_name?.toLowerCase().includes(searchLower)
             );
@@ -87,22 +82,26 @@ export function ScreenerWidget({
         // Apply active filters
         activeFilters.forEach(filter => {
             if (filter.value) {
-                result = result.filter((s: any) => {
+                const filterValue = filter.value;
+                result = result.filter(s => {
                     const val = s[filter.id];
-                    if (filter.value.gte !== undefined && val < filter.value.gte) return false;
-                    if (filter.value.lt !== undefined && val >= filter.value.lt) return false;
-                    if (filter.value.gt !== undefined && val <= filter.value.gt) return false;
-                    if (filter.value.eq !== undefined && val !== filter.value.eq) return false;
+                    if (typeof filterValue === 'string') return val === filterValue;
+                    if (filterValue.eq !== undefined && val !== filterValue.eq) return false;
+                    if (typeof val !== 'number') return true;
+                    if (filterValue.gte !== undefined && val < filterValue.gte) return false;
+                    if (filterValue.lt !== undefined && val >= filterValue.lt) return false;
+                    if (filterValue.gt !== undefined && val <= filterValue.gt) return false;
                     return true;
                 });
             }
         });
 
         // Apply sorting
-        result.sort((a: any, b: any) => {
-            const aVal = a[sortField] ?? 0;
-            const bVal = b[sortField] ?? 0;
-            return sortOrder === 'desc' ? bVal - aVal : aVal - bVal;
+        result.sort((a, b) => {
+            const aVal = a[sortField];
+            const bVal = b[sortField];
+            const comparison = (typeof bVal === 'number' ? bVal : 0) - (typeof aVal === 'number' ? aVal : 0);
+            return sortOrder === 'desc' ? comparison : -comparison;
         });
 
         return result;
@@ -121,7 +120,7 @@ export function ScreenerWidget({
     const handleSelectScreen = useCallback((screen: SavedScreen) => {
         setActiveScreenId(screen.id);
         if (screen.filters) {
-            setActiveFilters(screen.filters);
+            setActiveFilters(screen.filters.filter((filter): filter is ActiveFilter => 'id' in filter));
         }
     }, []);
 
@@ -140,12 +139,12 @@ export function ScreenerWidget({
     }, []);
 
     // Table columns configuration
-    const tableColumns = useMemo(() => {
+    const tableColumns = useMemo<VirtualizedColumn<ScreenerData>[]>(() => {
         return visibleColumns.map(col => ({
             id: col.id,
             header: col.label,
             width: col.width || 100,
-            accessor: (row: any) => formatScreenerValue(row[col.id], col.format),
+            accessor: (row: ScreenerData) => formatScreenerValue(row[col.accessor], col.format),
             sortable: true,
         }));
     }, [visibleColumns]);
@@ -287,15 +286,15 @@ export function ScreenerWidget({
                             onSort={handleSort}
                         />
                     ) : viewMode === 'performance' ? (
-                        <PerformanceTable data={filteredData as any} />
+                        <PerformanceTable data={filteredData} />
                     ) : (
                         <div className="h-full overflow-y-auto p-4 scrollbar-hide">
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
-                                {filteredData.map((stock: any) => (
+                                {filteredData.map(stock => (
                                     <ChartGridCard
                                         key={stock.ticker}
                                         symbol={stock.ticker}
-                                        name={stock.organ_name}
+                                        name={stock.organ_name ?? stock.company_name ?? stock.ticker}
                                         price={stock.price}
                                         change={stock.change_1d}
                                         changePercent={stock.change_1d}

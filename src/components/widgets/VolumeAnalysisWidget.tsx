@@ -2,6 +2,7 @@
 
 'use client';
 
+import { useState } from 'react';
 import { BarChart2, RefreshCw, TrendingUp, TrendingDown } from 'lucide-react';
 import { useHistoricalPrices } from '@/lib/queries';
 
@@ -19,8 +20,9 @@ function formatVolume(vol: number): string {
 }
 
 export function VolumeAnalysisWidget({ symbol, isEditing, onRemove }: VolumeAnalysisWidgetProps) {
+    const [startDate] = useState(() => new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
     const { data, isLoading, refetch, isRefetching } = useHistoricalPrices(symbol, {
-        startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        startDate,
     });
 
     const prices = data?.data || [];

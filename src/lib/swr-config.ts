@@ -13,7 +13,7 @@ import { SWRConfiguration } from 'swr';
 /**
  * Custom fetcher with error handling and response validation.
  */
-export async function fetcher<T = any>(
+export async function fetcher<T = unknown>(
   url: string,
   options?: RequestInit
 ): Promise<T> {
@@ -31,12 +31,10 @@ export async function fetcher<T = any>(
     // Try to parse error response
     try {
       const errorData = await response.json();
-      (error as any).info = errorData;
-      (error as any).status = response.status;
+      Object.assign(error, { info: errorData, status: response.status });
     } catch {
       // If parsing fails, use status text
-      (error as any).info = { message: response.statusText };
-      (error as any).status = response.status;
+      Object.assign(error, { info: { message: response.statusText }, status: response.status });
     }
 
     throw error;
@@ -48,19 +46,18 @@ export async function fetcher<T = any>(
 /**
  * Fetcher with retry logic for transient errors.
  */
-export async function fetcherWithRetry<T = any>(
+export async function fetcherWithRetry<T = unknown>(
   url: string,
   options?: RequestInit,
   retries = 2
 ): Promise<T> {
   try {
     return await fetcher<T>(url, options);
-  } catch (error: any) {
+  } catch (error: unknown) {
     // Retry on network errors or 5xx errors
     const shouldRetry =
-      error.status >= 500 ||
-      error.message.includes('fetch') ||
-      error.message.includes('network');
+      (error instanceof Error && 'status' in error && typeof error.status === 'number' && error.status >= 500) ||
+      (error instanceof Error && (error.message.includes('fetch') || error.message.includes('network')));
 
     if (retries > 0 && shouldRetry) {
       // Exponential backoff
@@ -175,19 +172,16 @@ export function getSWRConfig(dataType: 'market' | 'static' | 'user' = 'market'):
  */
 export function swrKey(
   endpoint: string,
-  params?: Record<string, any>
-): string | [string, Record<string, any>] {
+  params?: Record<string, unknown>
+): string | [string, Record<string, unknown>] {
   if (!params || Object.keys(params).length === 0) {
     return endpoint;
   }
 
   // Remove undefined/null values
-  const cleanParams = Object.entries(params).reduce((acc, [key, value]) => {
-    if (value !== undefined && value !== null) {
-      acc[key] = value;
-    }
-    return acc;
-  }, {} as Record<string, any>);
+  const cleanParams = Object.fromEntries(
+    Object.entries(params).filter(([, value]) => value !== undefined && value !== null)
+  );
 
   return [endpoint, cleanParams];
 }

@@ -124,7 +124,7 @@ function IncomeStatementWidgetComponent({ id, symbol, isEditing, onRemove }: Inc
                 <div className="flex justify-end px-2 pt-1">
                     <select
                         value={chartType}
-                        onChange={(e) => setChartType(e.target.value as any)}
+                        onChange={(e) => setChartType(e.target.value === 'margins' ? 'margins' : 'overview')}
                         className="bg-gray-900 text-[10px] font-bold text-gray-400 border border-gray-800 rounded px-2 py-1 focus:outline-none focus:border-blue-500 uppercase tracking-tighter cursor-pointer hover:text-white transition-colors"
                     >
                         <option value="overview">Revenue & Profit</option>

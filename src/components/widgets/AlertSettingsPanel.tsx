@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Settings, Save, Bell, Mail, Volume2 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getAlertSettings, updateAlertSettings } from '@/lib/api';
@@ -32,7 +32,9 @@ export function AlertSettingsPanel({ userId = 1 }: AlertSettingsPanelProps) {
     notification_email: '',
   });
 
-  useEffect(() => {
+  const [previousSettings, setPreviousSettings] = useState<AlertSettings>();
+  if (previousSettings !== settings) {
+    setPreviousSettings(settings);
     if (settings) {
       setFormData({
         block_trade_threshold: settings.block_trade_threshold,
@@ -46,7 +48,7 @@ export function AlertSettingsPanel({ userId = 1 }: AlertSettingsPanelProps) {
         notification_email: settings.notification_email || '',
       });
     }
-  }, [settings]);
+  }
 
   const updateMutation = useMutation({
     mutationFn: (data: Partial<AlertSettings>) => updateAlertSettings(userId, data),

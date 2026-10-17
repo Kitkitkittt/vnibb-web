@@ -73,8 +73,6 @@ export function DashboardGrid({
             timeoutId = setTimeout(updateWidth, 100);
         };
 
-        updateWidth();
-
         const resizeObserver = new ResizeObserver(debouncedUpdate);
         if (containerRef.current) {
             resizeObserver.observe(containerRef.current);

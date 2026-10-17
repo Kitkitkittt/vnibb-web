@@ -18,7 +18,33 @@ export const DropdownMenu = ({ children }: { children: React.ReactNode }) => {
     );
 };
 
-export const DropdownMenuTrigger = ({ children, asChild }: any) => {
+interface ChildrenProps {
+    children: React.ReactNode;
+    className?: string;
+}
+
+interface TriggerProps extends ChildrenProps {
+    asChild?: boolean;
+}
+
+interface DropdownContentProps extends ChildrenProps {
+    align?: 'start' | 'center' | 'end';
+}
+
+interface DropdownItemProps extends ChildrenProps {
+    onClick?: (event: React.MouseEvent<HTMLDivElement>) => void;
+}
+
+interface DropdownCheckboxItemProps extends ChildrenProps {
+    checked: boolean;
+    onCheckedChange?: (checked: boolean) => void;
+}
+
+interface SubItemProps extends ChildrenProps {
+    isOpen?: boolean;
+}
+
+export const DropdownMenuTrigger = ({ children, asChild }: TriggerProps) => {
     const context = useContext(DropdownMenuContext);
     if (!context) return null;
 
@@ -28,7 +54,7 @@ export const DropdownMenuTrigger = ({ children, asChild }: any) => {
     };
 
     if (asChild && React.isValidElement(children)) {
-        return React.cloneElement(children as React.ReactElement<any>, {
+        return React.cloneElement(children as React.ReactElement<Record<string, unknown>>, {
             onClick: handleClick
         });
     }
@@ -36,7 +62,7 @@ export const DropdownMenuTrigger = ({ children, asChild }: any) => {
     return <button onClick={handleClick}>{children}</button>;
 };
 
-export const DropdownMenuContent = ({ children, className = '', align = 'center' }: any) => {
+export const DropdownMenuContent = ({ children, className = '', align = 'center' }: DropdownContentProps) => {
     const context = useContext(DropdownMenuContext);
     const ref = useRef<HTMLDivElement>(null);
 
@@ -77,7 +103,7 @@ export const DropdownMenuContent = ({ children, className = '', align = 'center'
     );
 };
 
-export const DropdownMenuItem = ({ children, onClick, className }: any) => {
+export const DropdownMenuItem = ({ children, onClick, className }: DropdownItemProps) => {
     const context = useContext(DropdownMenuContext);
     return (
         <div
@@ -96,7 +122,7 @@ export const DropdownMenuItem = ({ children, onClick, className }: any) => {
     );
 };
 
-export const DropdownMenuCheckboxItem = ({ children, checked, onCheckedChange, className }: any) => {
+export const DropdownMenuCheckboxItem = ({ children, checked, onCheckedChange, className }: DropdownCheckboxItemProps) => {
     // Prevent closing on checkbox toggle usually, but here straightforward
     return (
         <div
@@ -117,13 +143,13 @@ export const DropdownMenuCheckboxItem = ({ children, checked, onCheckedChange, c
     );
 };
 
-export const DropdownMenuLabel = ({ children, className }: any) => (
+export const DropdownMenuLabel = ({ children, className }: ChildrenProps) => (
     <div className={cn("px-2 py-1.5 text-sm font-semibold", className)}>
         {children}
     </div>
 );
 
-export const DropdownMenuSeparator = ({ className }: any) => (
+export const DropdownMenuSeparator = ({ className }: { className?: string }) => (
     <div className={cn("-mx-1 my-1 h-px bg-muted", className)} />
 );
 
@@ -137,7 +163,7 @@ export const DropdownMenuSub = ({ children }: { children: React.ReactNode }) => 
         >
             {React.Children.map(children, child => {
                 if (React.isValidElement(child)) {
-                    return React.cloneElement(child as React.ReactElement<any>, { isOpen, setIsOpen });
+                    return React.cloneElement(child as React.ReactElement<Record<string, unknown>>, { isOpen, setIsOpen });
                 }
                 return child;
             })}
@@ -145,7 +171,7 @@ export const DropdownMenuSub = ({ children }: { children: React.ReactNode }) => 
     );
 };
 
-export const DropdownMenuSubTrigger = ({ children, className, isOpen }: any) => (
+export const DropdownMenuSubTrigger = ({ children, className, isOpen }: SubItemProps) => (
     <div className={cn(
         "flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground",
         isOpen && "bg-accent text-accent-foreground",
@@ -156,7 +182,7 @@ export const DropdownMenuSubTrigger = ({ children, className, isOpen }: any) => 
     </div>
 );
 
-export const DropdownMenuSubContent = ({ children, className, isOpen }: any) => {
+export const DropdownMenuSubContent = ({ children, className, isOpen }: SubItemProps) => {
     if (!isOpen) return null;
     return (
         <div className={cn(

@@ -1,7 +1,7 @@
 // Peer Comparison Dashboard - Compare multiple stocks side by side with comprehensive metrics
 'use client';
 
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback, useSyncExternalStore } from 'react';
 
 import {
     Users,
@@ -66,18 +66,22 @@ const RADAR_METRICS = [
 
 const COMPARISON_SETS_KEY = 'vnibb_saved_comparison_sets';
 
+const subscribeToHydration = () => () => {};
+
 // Hook for managing saved comparison sets
 function useComparisonSets() {
-    const [sets, setSetsState] = useState<ComparisonSet[]>([]);
-
-    useEffect(() => {
+    const hydrated = useSyncExternalStore(subscribeToHydration, () => true, () => false);
+    const [storedSets, setSetsState] = useState<ComparisonSet[]>(() => {
+        if (typeof window === 'undefined') return [];
         try {
             const stored = localStorage.getItem(COMPARISON_SETS_KEY);
-            if (stored) setSetsState(JSON.parse(stored));
+            return stored ? JSON.parse(stored) : [];
         } catch (error) {
             console.error('Failed to load comparison sets:', error);
+            return [];
         }
-    }, []);
+    });
+    const sets = hydrated ? storedSets : [];
 
 
     const setSets = useCallback((newSets: ComparisonSet[]) => {
@@ -189,9 +193,10 @@ export function PeerComparisonWidget({ symbol, isEditing, onRemove }: PeerCompar
         if (!compData?.data) return [];
 
         return RADAR_METRICS.map(m => {
-            const entry: any = { subject: m.label };
+            const entry: { subject: string } & Record<string, string | number> = { subject: m.label };
             peers.forEach(sym => {
-                const val = compData.data[sym]?.metrics?.[m.key];
+                const metricValue = compData.data[sym]?.metrics?.[m.key];
+                const val = typeof metricValue === 'number' ? metricValue : 0;
                 // Simple normalization for visualization
                 if (m.inverse) {
                     entry[sym] = val ? (1 / val) * 100 : 0;
@@ -538,7 +543,7 @@ export function PeerComparisonWidget({ symbol, isEditing, onRemove }: PeerCompar
 }
 
 // Helper: Format cell values based on metric format type
-function formatCellValue(value: any, format: string) {
+function formatCellValue(value: number | string | null | undefined, format: string) {
     if (value === null || value === undefined) return '-';
     if (typeof value !== 'number') return String(value);
 

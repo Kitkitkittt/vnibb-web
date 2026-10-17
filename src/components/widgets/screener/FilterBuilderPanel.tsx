@@ -177,7 +177,7 @@ const METRIC_GROUPS: { name: string; metrics: MetricDefinition[] }[] = [
 const ALL_METRICS = METRIC_GROUPS.flatMap(g => g.metrics);
 const METRIC_MAP = new Map(ALL_METRICS.map(m => [m.id, m]));
 
-const OPERATORS = [
+const OPERATORS: { id: FilterCondition['operator']; name: string; symbol: string }[] = [
     { id: 'gt', name: '> Greater Than', symbol: '>' },
     { id: 'gte', name: '>= Greater or Equal', symbol: '≥' },
     { id: 'lt', name: '< Less Than', symbol: '<' },
@@ -297,7 +297,7 @@ export function FilterBuilderPanel({ filterGroup, onFilterChange, onClose }: Fil
                 {filterGroup.conditions.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-10 text-gray-600 border-2 border-dashed border-[#1e1e1e] rounded-xl">
                         <p className="text-sm">No conditions defined</p>
-                        <p className="text-xs mt-1">Click "Add Condition" to start filtering</p>
+                        <p className="text-xs mt-1">Click &quot;Add Condition&quot; to start filtering</p>
                     </div>
                 ) : (
                     filterGroup.conditions.map((cond, index) => (
@@ -353,7 +353,10 @@ export function FilterBuilderPanel({ filterGroup, onFilterChange, onClose }: Fil
                                 <div className="w-1/5 min-w-[100px]">
                                     <Select
                                         value={cond.operator}
-                                        onValueChange={(val: FilterCondition['operator']) => updateCondition(cond.id, { operator: val })}
+                                        onValueChange={val => {
+                                            const operator = OPERATORS.find(option => option.id === val);
+                                            if (operator) updateCondition(cond.id, { operator: operator.id });
+                                        }}
                                     >
                                         <SelectTrigger className="bg-[#0a0a0a] border-[#222] text-xs h-9 text-gray-300">
                                             <SelectValue />

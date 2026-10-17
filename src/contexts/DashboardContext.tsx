@@ -9,6 +9,7 @@ import {
     useCallback,
     useEffect,
     useState,
+    useSyncExternalStore,
     type ReactNode,
 } from 'react';
 import type {
@@ -708,6 +709,10 @@ interface DashboardProviderProps {
     children: ReactNode;
 }
 
+const subscribeToHydration = () => () => {};
+const clientSnapshot = () => true;
+const serverSnapshot = () => false;
+
 export function DashboardProvider({ children }: DashboardProviderProps) {
     const [state, dispatch] = useReducer(dashboardReducer, {
         dashboards: [],
@@ -716,15 +721,23 @@ export function DashboardProvider({ children }: DashboardProviderProps) {
         activeTabId: null,
     });
 
-    // Load from localStorage on mount
-    useEffect(() => {
-        if (typeof window === 'undefined') return;
+    const [initialization, setInitialization] = useState<{
+        migrated: boolean;
+        invalidWidgets: WidgetInstance[];
+        error?: unknown;
+    } | null>(null);
+    const hydrated = useSyncExternalStore(subscribeToHydration, clientSnapshot, serverSnapshot);
 
+    // Keep SSR and hydration empty; load once before the first client persistence effect.
+    // Storage writes and migration diagnostics belong to the effects below, not render.
+    if (hydrated && initialization === null) {
         try {
             const storedDashboards = localStorage.getItem(STORAGE_KEY);
             const storedFolders = localStorage.getItem(FOLDERS_KEY);
             const storedMigrationVersion = localStorage.getItem(MIGRATION_VERSION_KEY);
             const migrationVersion = storedMigrationVersion ? parseInt(storedMigrationVersion, 10) : 0;
+            let migrated = false;
+            const invalidWidgets: WidgetInstance[] = [];
 
             let dashboards: Dashboard[] = [];
             let folders: DashboardFolder[] = [];
@@ -751,7 +764,7 @@ export function DashboardProvider({ children }: DashboardProviderProps) {
                         ...t,
                         widgets: t.widgets.filter(w => {
                             if (!w.type || typeof w.type !== 'string') {
-                                console.warn('Removing invalid widget (missing type):', w);
+                                invalidWidgets.push(w);
                                 return false;
                             }
                             return true;
@@ -759,8 +772,7 @@ export function DashboardProvider({ children }: DashboardProviderProps) {
                     }))
                 }));
 
-                // Save migration version
-                localStorage.setItem(MIGRATION_VERSION_KEY, String(CURRENT_MIGRATION_VERSION));
+                migrated = true;
             }
 
             const activeDashboardId = dashboards[0]?.id || null;
@@ -770,8 +782,9 @@ export function DashboardProvider({ children }: DashboardProviderProps) {
                 type: 'SET_STATE',
                 payload: { dashboards, folders, activeDashboardId, activeTabId },
             });
+            setInitialization({ migrated, invalidWidgets });
         } catch (error) {
-            console.error('Failed to load dashboards from storage:', error);
+            setInitialization({ migrated: false, invalidWidgets: [], error });
             const defaultDashboard = createDefaultDashboard();
             dispatch({
                 type: 'SET_STATE',
@@ -783,11 +796,28 @@ export function DashboardProvider({ children }: DashboardProviderProps) {
                 },
             });
         }
-    }, []);
+    }
+
+    useEffect(() => {
+        if (!initialization) return;
+        if (initialization.error) {
+            console.error('Failed to load dashboards from storage:', initialization.error);
+        }
+        for (const widget of initialization.invalidWidgets) {
+            console.warn('Removing invalid widget (missing type):', widget);
+        }
+        if (initialization.migrated) {
+            try {
+                localStorage.setItem(MIGRATION_VERSION_KEY, String(CURRENT_MIGRATION_VERSION));
+            } catch (error) {
+                console.error('Failed to save dashboard migration version:', error);
+            }
+        }
+    }, [initialization]);
 
     // Save to localStorage on state change
     useEffect(() => {
-        if (typeof window === 'undefined') return;
+        if (!initialization) return;
         if (state.dashboards.length === 0) return;
 
         try {
@@ -796,7 +826,7 @@ export function DashboardProvider({ children }: DashboardProviderProps) {
         } catch (error) {
             console.error('Failed to save dashboards to storage:', error);
         }
-    }, [state.dashboards, state.folders]);
+    }, [state.dashboards, state.folders, initialization]);
 
     // Sync to backend (debounced)
     const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'synced' | 'error'>('idle');

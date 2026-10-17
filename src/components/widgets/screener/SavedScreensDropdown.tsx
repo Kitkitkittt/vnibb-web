@@ -3,19 +3,26 @@
 import { useState, useRef, useEffect } from 'react';
 import { ChevronDown, Star, Plus, Trash2, Bookmark } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import type { ActiveFilter } from './FilterBar';
+
+interface LegacyScreenFilter {
+  field: string;
+  operator: 'gt' | 'lt' | 'eq';
+  value: number | string;
+}
 
 export interface SavedScreen {
   id: string;
   name: string;
-  filters: any[];
+  filters: (ActiveFilter | LegacyScreenFilter)[];
   columns: string[];
   isBuiltIn?: boolean;
 }
 
 const BUILT_IN_SCREENS: SavedScreen[] = [
   { id: 'all', name: 'All Stocks', filters: [], columns: [], isBuiltIn: true },
-  { id: 'gainers', name: 'Top Gainers', filters: [{ field: 'change', operator: 'gt', value: 5 }], columns: [], isBuiltIn: true },
-  { id: 'losers', name: 'Top Losers', filters: [{ field: 'change', operator: 'lt', value: -5 }], columns: [], isBuiltIn: true },
+  { id: 'gainers', name: 'Top Gainers', filters: [{ id: 'change_1d', value: { gt: 5 }, displayValue: 'Above 5%' }], columns: [], isBuiltIn: true },
+  { id: 'losers', name: 'Top Losers', filters: [{ id: 'change_1d', value: { lt: -5 }, displayValue: 'Below -5%' }], columns: [], isBuiltIn: true },
   { id: 'active', name: 'Most Active', filters: [], columns: ['volume'], isBuiltIn: true },
   { id: 'vn30', name: 'VN30', filters: [{ field: 'index', operator: 'eq', value: 'VN30' }], columns: [], isBuiltIn: true },
 ];

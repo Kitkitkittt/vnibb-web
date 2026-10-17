@@ -7,6 +7,9 @@
 
 'use client';
 
+import type { EquityHistoricalResponse, EquityProfileResponse } from '@/types/equity';
+import type { ScreenerData } from '@/types/screener';
+import type { QuoteResponse } from '@/lib/api';
 import { useMemo } from 'react';
 import { 
     useProfile, 
@@ -18,10 +21,10 @@ import { apiCache, CACHE_TTL } from '@/lib/apiCache';
 
 export interface UnifiedStockData {
     symbol: string;
-    profile: any;
-    quote: any;
-    metrics: any;
-    historical: any;
+    profile: EquityProfileResponse | null;
+    quote: Pick<QuoteResponse['data'], 'symbol' | 'price' | 'change' | 'changePct' | 'volume' | 'high' | 'low' | 'open'> & { cached: boolean } | null;
+    metrics: ScreenerData | null;
+    historical: EquityHistoricalResponse['data'];
     isLoading: boolean;
     isError: boolean;
     error: Error | null;
@@ -32,7 +35,7 @@ export interface UnifiedStockData {
 export function useStockData(symbol: string, enabled = true): UnifiedStockData {
     // Check manual cache for the unified object
     const cacheKey = `unified:${symbol}`;
-    const cachedData = apiCache.get<any>(cacheKey);
+    const cachedData = apiCache.get<Omit<UnifiedStockData, 'isLoading' | 'isError' | 'error' | 'isFromCache' | 'refetch'>>(cacheKey);
 
     // Profile Data (10 min stale)
     const profileQuery = useProfile(symbol, enabled && !cachedData);
@@ -81,7 +84,7 @@ export function useStockData(symbol: string, enabled = true): UnifiedStockData {
         }
 
         return null;
-    }, [symbol, profileQuery.data, quoteQuery.data, metricsQuery.data, historyQuery.data, cachedData]);
+    }, [symbol, cacheKey, profileQuery.data, quoteQuery.data, metricsQuery.data, historyQuery.data, cachedData]);
 
     return {
         symbol,

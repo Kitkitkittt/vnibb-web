@@ -125,7 +125,7 @@ function BalanceSheetWidgetComponent({ id, symbol, isEditing, onRemove }: Balanc
                 <div className="flex justify-end px-2 pt-1">
                     <select
                         value={chartType}
-                        onChange={(e) => setChartType(e.target.value as any)}
+                        onChange={(e) => setChartType(e.target.value === 'debt' ? 'debt' : 'overview')}
                         className="bg-gray-900 text-[10px] font-bold text-gray-400 border border-gray-800 rounded px-2 py-1 focus:outline-none focus:border-blue-500 uppercase tracking-tighter cursor-pointer hover:text-white transition-colors"
                     >
                         <option value="overview">Assets & Liab.</option>

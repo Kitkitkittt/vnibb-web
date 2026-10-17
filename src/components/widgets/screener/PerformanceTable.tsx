@@ -4,21 +4,13 @@ import { useState } from 'react';
 import { CompanyLogo } from '@/components/ui/CompanyLogo';
 import { ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import type { ScreenerData } from '@/types/screener';
+import { formatScreenerValue } from '@/utils/formatters';
 
-export interface PerformanceData {
-  symbol: string;
-  name: string;
-  price: number;
-  perf_1d: number;
-  perf_1w: number;
-  perf_1m: number;
-  perf_3m: number;
-  perf_6m: number;
-  perf_ytd: number;
-  perf_1y: number;
-}
 
-const TIMEFRAME_COLUMNS = [
+type PerformanceColumn = 'perf_1d' | 'perf_1w' | 'perf_1m' | 'perf_3m' | 'perf_6m' | 'perf_ytd' | 'perf_1y';
+
+const TIMEFRAME_COLUMNS: { key: PerformanceColumn; label: string }[] = [
   { key: 'perf_1d', label: '1D' },
   { key: 'perf_1w', label: '1W' },
   { key: 'perf_1m', label: '1M' },
@@ -29,20 +21,20 @@ const TIMEFRAME_COLUMNS = [
 ];
 
 interface PerformanceTableProps {
-  data: PerformanceData[];
+  data: ScreenerData[];
 }
 
 export function PerformanceTable({ data }: PerformanceTableProps) {
-  const [sortColumn, setSortColumn] = useState<string>('perf_1d');
+  const [sortColumn, setSortColumn] = useState<PerformanceColumn>('perf_1d');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
   const sortedData = [...data].sort((a, b) => {
-    const aVal = a[sortColumn as keyof PerformanceData] as number || 0;
-    const bVal = b[sortColumn as keyof PerformanceData] as number || 0;
+    const aVal = a[sortColumn] ?? 0;
+    const bVal = b[sortColumn] ?? 0;
     return sortDirection === 'desc' ? bVal - aVal : aVal - bVal;
   });
 
-  const toggleSort = (column: string) => {
+  const toggleSort = (column: PerformanceColumn) => {
     if (sortColumn === column) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     } else {
@@ -76,23 +68,23 @@ export function PerformanceTable({ data }: PerformanceTableProps) {
         </thead>
         <tbody className="divide-y divide-gray-800/30">
           {sortedData.map((row) => (
-            <tr key={row.symbol} className="hover:bg-white/5 transition-colors group">
+            <tr key={row.ticker} className="hover:bg-white/5 transition-colors group">
               <td className="px-4 py-2 border-r border-gray-800/10">
                 <div className="flex items-center gap-2">
-                  <CompanyLogo symbol={row.symbol} size={20} />
+                  <CompanyLogo symbol={row.ticker} size={20} />
                   <div>
-                    <div className="text-gray-100 font-bold tracking-tight">{row.symbol}</div>
-                    <div className="text-[9px] text-gray-600 font-medium truncate max-w-[110px] uppercase tracking-tighter">{row.name}</div>
+                    <div className="text-gray-100 font-bold tracking-tight">{row.ticker}</div>
+                    <div className="text-[9px] text-gray-600 font-medium truncate max-w-[110px] uppercase tracking-tighter">{row.organ_name ?? row.company_name ?? row.ticker}</div>
                   </div>
                 </div>
               </td>
               <td className="text-right px-3 py-2 font-mono text-gray-300 group-hover:text-white">
-                {row.price.toLocaleString()}
+                {formatScreenerValue(row.price, 'number')}
               </td>
               {TIMEFRAME_COLUMNS.map(col => {
-                const value = row[col.key as keyof PerformanceData] as number;
-                const isPositive = value > 0;
-                const isNegative = value < 0;
+                const value = row[col.key];
+                const isPositive = value != null && value > 0;
+                const isNegative = value != null && value < 0;
                 
                 return (
                   <td
@@ -102,7 +94,7 @@ export function PerformanceTable({ data }: PerformanceTableProps) {
                         isPositive ? 'text-green-500 bg-green-500/5' : isNegative ? 'text-red-500 bg-red-500/5' : 'text-gray-500'
                     )}
                   >
-                    {isPositive ? '+' : ''}{value?.toFixed(2)}%
+                    {formatScreenerValue(value, 'change')}
                   </td>
                 );
               })}

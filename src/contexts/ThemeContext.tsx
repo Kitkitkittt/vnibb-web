@@ -10,7 +10,7 @@
  * - System preference detection
  */
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, useSyncExternalStore, ReactNode } from 'react';
 
 type Theme = 'dark' | 'light' | 'system';
 
@@ -24,42 +24,42 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 const THEME_STORAGE_KEY = 'vnibb-theme';
 
+const subscribeToHydration = () => () => {};
+const clientSnapshot = () => true;
+const serverSnapshot = () => false;
+function subscribeToSystemTheme(onChange: () => void) {
+  const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+  mediaQuery.addEventListener('change', onChange);
+  return () => mediaQuery.removeEventListener('change', onChange);
+}
+const systemThemeSnapshot = () => window.matchMedia('(prefers-color-scheme: dark)').matches;
+
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>('dark');
   const [mounted, setMounted] = useState(false);
 
-  // Get resolved theme (handles 'system' preference)
-  const getResolvedTheme = (theme: Theme): 'dark' | 'light' => {
-    if (theme === 'system') {
-      return window.matchMedia('(prefers-color-scheme: dark)').matches
-        ? 'dark'
-        : 'light';
-    }
-    return theme;
-  };
+  const hydrated = useSyncExternalStore(subscribeToHydration, clientSnapshot, serverSnapshot);
+  const systemDark = useSyncExternalStore(subscribeToSystemTheme, systemThemeSnapshot, clientSnapshot);
+  const resolvedTheme = theme === 'system' ? (systemDark ? 'dark' : 'light') : theme;
 
-  const [resolvedTheme, setResolvedTheme] = useState<'dark' | 'light'>('dark');
-
-  // Load theme from localStorage on mount
-  useEffect(() => {
+  if (hydrated && !mounted) {
+    let initialTheme: Theme = 'dark';
     try {
-      const stored = localStorage.getItem(THEME_STORAGE_KEY) as Theme | null;
-      const initialTheme = stored || 'dark';
-      setThemeState(initialTheme);
-      setResolvedTheme(getResolvedTheme(initialTheme));
-      setMounted(true);
+      const stored = localStorage.getItem(THEME_STORAGE_KEY);
+      if (stored === 'dark' || stored === 'light' || stored === 'system') initialTheme = stored;
     } catch (error) {
       console.error('Failed to load theme from localStorage:', error);
-      setMounted(true);
     }
-  }, []);
+    setThemeState(initialTheme);
+    setMounted(true);
+  }
 
   // Apply theme to document
   useEffect(() => {
     if (!mounted) return;
 
     const root = document.documentElement;
-    const resolved = getResolvedTheme(theme);
+    const resolved = resolvedTheme;
     
     // Remove both classes first
     root.classList.remove('light', 'dark');
@@ -76,22 +76,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       );
     }
 
-    setResolvedTheme(resolved);
-  }, [theme, mounted]);
-
-  // Listen for system theme changes
-  useEffect(() => {
-    if (theme !== 'system') return;
-
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    
-    const handleChange = () => {
-      setResolvedTheme(mediaQuery.matches ? 'dark' : 'light');
-    };
-
-    mediaQuery.addEventListener('change', handleChange);
-    return () => mediaQuery.removeEventListener('change', handleChange);
-  }, [theme]);
+  }, [resolvedTheme, mounted]);
 
   const setTheme = (newTheme: Theme) => {
     try {

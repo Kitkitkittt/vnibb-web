@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 import { Calendar, Clock, TrendingUp, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface EconomicEvent {
@@ -55,14 +55,12 @@ function formatDate(dateStr: string): string {
     return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 }
 
+const subscribeToHydration = () => () => {};
+
 export function EconomicCalendarWidget({ isEditing, onRemove }: EconomicCalendarWidgetProps) {
     const [filter, setFilter] = useState<'all' | 'high' | 'vn'>('all');
-    const [today, setToday] = useState<string>('');
-
-    // Set today's date on client-side only to avoid hydration mismatch
-    useEffect(() => {
-        setToday(new Date().toISOString().split('T')[0]);
-    }, []);
+    const [today] = useState(() => new Date().toISOString().split('T')[0]);
+    const hydrated = useSyncExternalStore(subscribeToHydration, () => true, () => false);
 
     const filteredEvents = ECONOMIC_EVENTS.filter(e => {
         if (filter === 'high') return e.impact === 'high';
@@ -110,9 +108,9 @@ export function EconomicCalendarWidget({ isEditing, onRemove }: EconomicCalendar
             <div className="flex-1 overflow-auto space-y-2">
                 {Object.entries(groupedEvents).map(([date, events]) => (
                     <div key={date}>
-                        <div className={`text-[10px] px-1 py-0.5 rounded mb-1 ${date === today ? 'bg-blue-500/20 text-blue-400' : 'text-gray-500'
+                        <div className={`text-[10px] px-1 py-0.5 rounded mb-1 ${hydrated && date === today ? 'bg-blue-500/20 text-blue-400' : 'text-gray-500'
                             }`}>
-                            {formatDate(date)} {date === today && '(Today)'}
+                            {formatDate(date)} {hydrated && date === today && '(Today)'}
                         </div>
                         <div className="space-y-1">
                             {events.map((event) => (

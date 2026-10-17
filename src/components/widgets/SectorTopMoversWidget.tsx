@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useState, useRef, useMemo } from 'react';
+import { memo, useState, useRef } from 'react';
 import { WidgetContainer } from '@/components/ui/WidgetContainer';
 import { useQuery } from '@tanstack/react-query';
 import { ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Layers, RefreshCw } from 'lucide-react';
@@ -120,10 +120,9 @@ function SectorTopMoversWidgetComponent({ id, onRemove }: { id: string, onRemove
 
 function SectorColumn({ sector, viewType }: { sector: SectorData; viewType: string }) {
   const stocks = sector.stocks || [];
-  const avgChange = useMemo(() => {
-      if (stocks.length === 0) return 0;
-      return stocks.reduce((acc, s) => acc + (s.change_pct || 0), 0) / stocks.length;
-  }, [stocks]);
+  const avgChange = stocks.length === 0
+    ? 0
+    : stocks.reduce((acc, s) => acc + (s.change_pct || 0), 0) / stocks.length;
   
   const isPositive = avgChange >= 0;
 

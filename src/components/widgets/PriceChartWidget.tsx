@@ -12,6 +12,7 @@ import {
     type HistogramData,
     CrosshairMode,
     type MouseEventParams,
+    type LineWidth,
 } from 'lightweight-charts';
 import { useHistoricalPrices, useFullTechnicalAnalysis, useRSRatingHistory } from '@/lib/queries';
 import { usePriceStream } from '@/lib/hooks/useWebSocket';
@@ -185,6 +186,12 @@ export function PriceChartWidget({
     // RS History for overlay
     const { data: rsHistory } = useRSRatingHistory(symbol, 250, activeOverlays.includes('rs_line'));
 
+    const [previousLoading, setPreviousLoading] = useState(isLoading);
+    if (previousLoading !== isLoading) {
+        setPreviousLoading(isLoading);
+        if (isLoading) setTimedOut(false);
+    }
+
     // Refresh when requested by parent
     useEffect(() => {
         if (lastRefresh) {
@@ -195,7 +202,6 @@ export function PriceChartWidget({
     // Timeout detection
     useEffect(() => {
         if (isLoading) {
-            setTimedOut(false);
             const timer = setTimeout(() => setTimedOut(true), 15000);
             return () => clearTimeout(timer);
         }
@@ -210,7 +216,7 @@ export function PriceChartWidget({
     const processedData = useMemo(() => {
         if (!data?.data) return [];
 
-        let rawData = data.data.map((item) => ({
+        const rawData = data.data.map((item) => ({
             time: item.time as Time,
             open: item.open,
             high: item.high,
@@ -371,25 +377,8 @@ export function PriceChartWidget({
         };
     }, []);
 
-    useEffect(() => {
-        if (!chartRef.current || !mainSeriesRef.current || chartData.length === 0) return;
 
-        if (chartType === 'line' || chartType === 'area') {
-            mainSeriesRef.current.setData(chartData.map(d => ({ time: d.time, value: d.close })));
-        } else {
-            mainSeriesRef.current.setData(chartData);
-        }
-
-        if (volumeSeriesRef.current) {
-            volumeSeriesRef.current.setData(volumeData);
-        }
-
-        applyOverlays(chartRef.current, processedData as chartUtils.OHLCData[], activeOverlays);
-        applyIndicators(chartRef.current, processedData as chartUtils.OHLCData[], activeIndicators);
-        chartRef.current.timeScale().fitContent();
-    }, [chartData, volumeData, chartType, activeOverlays, activeIndicators, processedData]);
-
-    const applyOverlays = (chart: IChartApi, data: chartUtils.OHLCData[], overlays: string[]) => {
+    const applyOverlays = useCallback((chart: IChartApi, data: chartUtils.OHLCData[], overlays: string[]) => {
         clearOverlaySeries();
         overlays.forEach(overlay => {
             const series: ISeriesApi<'Line'>[] = [];
@@ -442,14 +431,14 @@ export function PriceChartWidget({
                 s.priceScale().applyOptions({
                     scaleMargins: { top: 0.1, bottom: 0.7 },
                 });
-                s.setData(rsHistory as any);
+                s.setData(rsHistory);
                 series.push(s);
             }
             if (series.length > 0) overlaySeriesRefs.current[overlay] = series;
         });
-    };
+    }, [clearOverlaySeries, rsHistory]);
 
-    const applyIndicators = (chart: IChartApi, data: chartUtils.OHLCData[], indicators: string[]) => {
+    const applyIndicators = useCallback((chart: IChartApi, data: chartUtils.OHLCData[], indicators: string[]) => {
         clearIndicatorSeries();
         indicators.forEach(indicator => {
             const series: ISeriesApi<'Line' | 'Histogram'>[] = [];
@@ -472,7 +461,24 @@ export function PriceChartWidget({
             }
             if (series.length > 0) indicatorSeriesRefs.current[indicator] = series;
         });
-    };
+    }, [clearIndicatorSeries]);
+    useEffect(() => {
+        if (!chartRef.current || !mainSeriesRef.current || chartData.length === 0) return;
+
+        if (chartType === 'line' || chartType === 'area') {
+            mainSeriesRef.current.setData(chartData.map(d => ({ time: d.time, value: d.close })));
+        } else {
+            mainSeriesRef.current.setData(chartData);
+        }
+
+        if (volumeSeriesRef.current) {
+            volumeSeriesRef.current.setData(volumeData);
+        }
+
+        applyOverlays(chartRef.current, processedData as chartUtils.OHLCData[], activeOverlays);
+        applyIndicators(chartRef.current, processedData as chartUtils.OHLCData[], activeIndicators);
+        chartRef.current.timeScale().fitContent();
+    }, [chartData, volumeData, chartType, activeOverlays, activeIndicators, processedData, applyOverlays, applyIndicators]);
 
     const formatVolume = (vol: number | null): string => {
         if (vol === null) return '-';
@@ -505,8 +511,7 @@ export function PriceChartWidget({
                 price,
                 color: activeColor,
                 lineWidth: 1,
-                symbol, // Need to add symbol here as well or use hook internal
-            } as any);
+            });
             setSelectedTool('select');
         }
     }, [selectedTool, activeColor, addAnnotation, setSelectedTool, symbol]);
@@ -525,7 +530,7 @@ export function PriceChartWidget({
                 return series.createPriceLine({
                     price: line.price,
                     color: line.color,
-                    lineWidth: (line.lineWidth || 1) as any,
+                    lineWidth: (line.lineWidth || 1) as LineWidth,
                     lineStyle: 0,
                     axisLabelVisible: true,
                     title: line.label || '',

@@ -1,7 +1,11 @@
 // useLocalStorage hook - Type-safe localStorage with SSR support
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useSyncExternalStore } from 'react';
+
+const subscribe = () => () => {};
+const getServerSnapshot = () => false;
+const getClientSnapshot = () => true;
 
 /**
  * Custom hook for persisting state to localStorage with SSR safety.
@@ -11,23 +15,20 @@ export function useLocalStorage<T>(
     key: string,
     initialValue: T
 ): [T, (value: T | ((prev: T) => T)) => void, () => void] {
-    // Initialize with initialValue to avoid hydration mismatch
+    // SSR and hydration use initialValue; adjust state after hydration before commit.
+    const isHydrated = useSyncExternalStore(subscribe, getClientSnapshot, getServerSnapshot);
     const [storedValue, setStoredValue] = useState<T>(initialValue);
-    const [isHydrated, setIsHydrated] = useState(false);
+    const [loadedKey, setLoadedKey] = useState<string | null>(null);
 
-    // Load from localStorage after mount (client-side only)
-    useEffect(() => {
+    if (isHydrated && loadedKey !== key) {
         try {
             const item = window.localStorage.getItem(key);
-            if (item !== null) {
-                const parsed = JSON.parse(item) as T;
-                setStoredValue(parsed);
-            }
+            if (item !== null) setStoredValue(JSON.parse(item) as T);
         } catch (error) {
             console.warn(`Error reading localStorage key "${key}":`, error);
         }
-        setIsHydrated(true);
-    }, [key]);
+        setLoadedKey(key);
+    }
 
     // Setter function with storage quota error handling
     const setValue = useCallback(

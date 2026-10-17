@@ -193,7 +193,7 @@ export interface DashboardUpdate {
     description?: string;
     folderId?: string;
     isDefault?: boolean;
-    layout_config?: Record<string, any>;
+    layout_config?: Partial<Pick<Dashboard, 'tabs' | 'syncGroups' | 'showGroupLabels' | 'folderId' | 'order'>>;
 }
 
 export interface TabCreate {

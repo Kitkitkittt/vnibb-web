@@ -41,7 +41,11 @@ const NAVIGATION_ITEMS = [
     { tab: 'screener', label: 'Screener', icon: <Table size={16} /> },
 ];
 
-export function CommandPalette({ isOpen, onClose, onSymbolSelect, onNavigate }: CommandPaletteProps) {
+export function CommandPalette(props: CommandPaletteProps) {
+    return props.isOpen ? <CommandPaletteSession {...props} /> : null;
+}
+
+function CommandPaletteSession({ isOpen, onClose, onSymbolSelect, onNavigate }: CommandPaletteProps) {
     const [query, setQuery] = useState('');
     const [selectedIndex, setSelectedIndex] = useState(0);
     const inputRef = useRef<HTMLInputElement>(null);
@@ -141,14 +145,9 @@ export function CommandPalette({ isOpen, onClose, onSymbolSelect, onNavigate }: 
 
     // Focus input when opened
     useEffect(() => {
-        if (isOpen) {
-            inputRef.current?.focus();
-            setQuery('');
-            setSelectedIndex(0);
-        }
-    }, [isOpen]);
+        inputRef.current?.focus();
+    }, []);
 
-    if (!isOpen) return null;
 
     return (
         <>
@@ -184,7 +183,7 @@ export function CommandPalette({ isOpen, onClose, onSymbolSelect, onNavigate }: 
                     <div className="max-h-80 overflow-y-auto">
                         {results.length === 0 ? (
                             <div className="p-4 text-center text-gray-500 text-sm">
-                                No results found for "{query}"
+                                No results found for &quot;{query}&quot;
                             </div>
                         ) : (
                             <div className="py-2">

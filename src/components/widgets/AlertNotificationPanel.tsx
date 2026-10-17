@@ -192,7 +192,7 @@ export function AlertNotificationPanel({ userId = 1 }: AlertNotificationPanelPro
                 <div className="flex flex-col items-center justify-center h-40 text-gray-500">
                   <Bell size={32} className="mb-2 opacity-30" />
                   <p className="text-sm">No alerts</p>
-                  <p className="text-xs mt-1">You're all caught up!</p>
+                  <p className="text-xs mt-1">You&apos;re all caught up!</p>
                 </div>
               ) : (
                 <div className="divide-y divide-zinc-800">

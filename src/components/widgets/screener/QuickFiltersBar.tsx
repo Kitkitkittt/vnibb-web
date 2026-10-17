@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 interface QuickFilter {
   id: string;
   label: string;
-  filters: any[];
+  filters: { field: string; operator: 'gt' | 'lt' | 'eq'; value: number | string }[];
 }
 
 const PRESET_FILTERS: QuickFilter[] = [

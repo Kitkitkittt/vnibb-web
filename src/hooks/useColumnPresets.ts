@@ -1,21 +1,27 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback, useSyncExternalStore } from 'react';
 import { DEFAULT_PRESETS, type ColumnPreset } from '@/types/screener';
 
 const STORAGE_KEY = 'vnibb_screener_presets_v2';
 const ACTIVE_PRESET_KEY = 'vnibb_screener_active_preset_v2';
 
+const subscribe = () => () => {};
+const getServerSnapshot = () => false;
+const getClientSnapshot = () => true;
+
 export function useColumnPresets() {
+  const isHydrated = useSyncExternalStore(subscribe, getClientSnapshot, getServerSnapshot);
   const [presets, setPresets] = useState<ColumnPreset[]>(DEFAULT_PRESETS);
   const [activePresetId, setActivePresetId] = useState<string>('overview');
   const [customColumns, setCustomColumns] = useState<string[] | null>(null);
+  const [loaded, setLoaded] = useState(false);
 
-  // Load from localStorage
-  useEffect(() => {
+  // Preserve SSR and hydration defaults, then adjust state before client commit.
+  if (isHydrated && !loaded) {
     const savedPresets = localStorage.getItem(STORAGE_KEY);
     const savedActivePreset = localStorage.getItem(ACTIVE_PRESET_KEY);
-    
+
     if (savedPresets) {
       try {
         const parsed = JSON.parse(savedPresets);
@@ -24,13 +30,9 @@ export function useColumnPresets() {
         console.error('Failed to parse saved presets', e);
       }
     }
-    
-    if (savedActivePreset) {
-      setActivePresetId(savedActivePreset);
-    }
-  }, []);
-
-  // Save to localStorage
+    if (savedActivePreset) setActivePresetId(savedActivePreset);
+    setLoaded(true);
+  }
   const savePreset = useCallback((preset: ColumnPreset) => {
     const customPresets = presets.filter(p => p.isCustom);
     const existing = customPresets.findIndex(p => p.id === preset.id);

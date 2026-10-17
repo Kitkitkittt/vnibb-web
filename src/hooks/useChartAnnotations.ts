@@ -1,28 +1,40 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback, useSyncExternalStore } from 'react';
 import { ChartAnnotation } from '@/types/annotations';
 
 const STORAGE_KEY = 'vnibb_chart_annotations_v1';
+type NewChartAnnotation<T extends ChartAnnotation = ChartAnnotation> = T extends ChartAnnotation
+  ? Omit<T, 'id' | 'symbol' | 'createdAt'>
+  : never;
+
+const subscribe = () => () => {};
+const getServerSnapshot = () => false;
+const getClientSnapshot = () => true;
 
 export function useChartAnnotations(symbol: string) {
+  const isHydrated = useSyncExternalStore(subscribe, getClientSnapshot, getServerSnapshot);
   const [annotations, setAnnotations] = useState<ChartAnnotation[]>([]);
   const [selectedTool, setSelectedTool] = useState<'select' | 'horizontal' | 'trend' | 'text'>('select');
   const [activeColor, setActiveColor] = useState('#3b82f6');
   const [isDrawing, setIsDrawing] = useState(false);
+  const [loadedSymbol, setLoadedSymbol] = useState<string | null>(null);
 
-  // Load annotations from localStorage
-  useEffect(() => {
+  // Preserve SSR and hydration defaults; reload state before client commit per symbol.
+  if (isHydrated && loadedSymbol !== symbol) {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       try {
-        const all: any[] = JSON.parse(saved);
-        setAnnotations(all.filter(a => a.symbol === symbol) as ChartAnnotation[]);
+        const all: ChartAnnotation[] = JSON.parse(saved);
+        setAnnotations(all.filter(a => a.symbol === symbol));
       } catch (e) {
         console.error('Failed to parse annotations', e);
       }
+    } else {
+      setAnnotations([]);
     }
-  }, [symbol]);
+    setLoadedSymbol(symbol);
+  }
 
   // Save all annotations to localStorage
   const saveToStorage = useCallback((newAnnotations: ChartAnnotation[]) => {
@@ -36,7 +48,7 @@ export function useChartAnnotations(symbol: string) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(combined));
   }, [symbol]);
 
-  const addAnnotation = useCallback((annotation: any) => {
+  const addAnnotation = useCallback((annotation: NewChartAnnotation) => {
     const newAnnotation = {
       ...annotation,
       id: `ann_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,

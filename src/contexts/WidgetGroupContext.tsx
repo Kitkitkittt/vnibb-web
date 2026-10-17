@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
+import { createContext, useContext, useState, useCallback, ReactNode, useEffect, useSyncExternalStore } from 'react';
 import { WidgetGroupId, WidgetGroupConfig, DEFAULT_GROUPS } from '@/types/widget';
 
 interface WidgetGroupContextValue {
@@ -15,22 +15,25 @@ interface WidgetGroupContextValue {
 const WidgetGroupContext = createContext<WidgetGroupContextValue | null>(null);
 
 const STORAGE_KEY = 'vnibb-widget-groups-v1';
+const subscribeToHydration = () => () => {};
+const clientSnapshot = () => true;
+const serverSnapshot = () => false;
 
 export function WidgetGroupProvider({ children }: { children: ReactNode }) {
   const [groups, setGroups] = useState<Record<WidgetGroupId, WidgetGroupConfig>>(DEFAULT_GROUPS);
   const [globalSymbol, setGlobalSymbol] = useState('VNM');
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // Load from localStorage on mount
-  useEffect(() => {
+  const hydrated = useSyncExternalStore(subscribeToHydration, clientSnapshot, serverSnapshot);
+  if (hydrated && !isLoaded) {
     const savedGroups = localStorage.getItem(STORAGE_KEY);
     if (savedGroups) setGroups(JSON.parse(savedGroups));
-    
+
     const savedSymbol = localStorage.getItem('vnibb-global-symbol');
     if (savedSymbol) setGlobalSymbol(savedSymbol);
-    
+
     setIsLoaded(true);
-  }, []);
+  }
 
   // Persist changes (only after initial load)
   useEffect(() => {
