@@ -129,8 +129,15 @@ export function PromptsLibrary({ isOpen, onClose, onSelectPrompt }: PromptsLibra
     }, []);
 
     const savePrompts = (newPrompts: Prompt[]) => {
-        localStorage.setItem(PROMPTS_STORAGE_KEY, JSON.stringify(newPrompts));
-        window.dispatchEvent(new Event('prompts-change'));
+        const raw = JSON.stringify(newPrompts);
+        getPromptsSnapshot();
+        cachedPrompts = newPrompts;
+        try {
+            localStorage.setItem(PROMPTS_STORAGE_KEY, raw);
+            cachedPromptsRaw = raw;
+        } finally {
+            window.dispatchEvent(new Event('prompts-change'));
+        }
     };
 
     const handleAddPrompt = () => {
@@ -307,6 +314,7 @@ export function PromptsLibrary({ isOpen, onClose, onSelectPrompt }: PromptsLibra
                                 {/* Delete Button (only for custom prompts) */}
                                 {!prompt.isDefault && (
                                     <button
+                                        aria-label={`Delete ${prompt.name}`}
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             handleDeletePrompt(prompt.id);

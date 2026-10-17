@@ -66,6 +66,18 @@ function getPresetsSnapshot(): FilterPreset[] {
     return cachedPresets;
 }
 
+function savePresets(presets: FilterPreset[]) {
+    const raw = JSON.stringify(presets);
+    getPresetsSnapshot();
+    cachedPresets = presets;
+    try {
+        localStorage.setItem(PRESET_STORAGE_KEY, raw);
+        cachedPresetsRaw = raw;
+    } finally {
+        window.dispatchEvent(new Event('screener-presets-change'));
+    }
+}
+
 
 
 // Default presets
@@ -189,8 +201,7 @@ export function ScreenerFilters({ filters, onFilterChange, onClose }: ScreenerFi
         };
         
         const updated = [...presets.filter(p => p.name !== newPreset.name), newPreset];
-        localStorage.setItem(PRESET_STORAGE_KEY, JSON.stringify(updated));
-        window.dispatchEvent(new Event('screener-presets-change'));
+        savePresets(updated);
         setPresetName('');
         setShowPresetModal(false);
     }, [presetName, filters, presets]);
@@ -205,8 +216,7 @@ export function ScreenerFilters({ filters, onFilterChange, onClose }: ScreenerFi
     const deletePreset = useCallback(
         (name: string) => {
             const updated = presets.filter(p => p.name !== name);
-            localStorage.setItem(PRESET_STORAGE_KEY, JSON.stringify(updated));
-            window.dispatchEvent(new Event('screener-presets-change'));
+            savePresets(updated);
         },
         [presets]
     );
@@ -366,6 +376,7 @@ export function ScreenerFilters({ filters, onFilterChange, onClose }: ScreenerFi
                                 {preset.name}
                             </button>
                             <button
+                                aria-label={`Delete ${preset.name}`}
                                 onClick={() => deletePreset(preset.name)}
                                 className="px-1.5 py-1.5 text-xs bg-red-900/30 hover:bg-red-900/50 text-red-400 rounded-r transition-colors"
                             >

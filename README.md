@@ -132,6 +132,8 @@ npm run build
 
 Lint uses the Next.js Core Web Vitals and TypeScript presets without source-rule overrides. Shared widget, screener, and export data contracts must remain typed at their API and component boundaries.
 
+Prompt and screener-preset edits remain available for the current session if browser storage writes fail. Persistence errors still surface; failed writes do not promise that edits survive a reload.
+
 ---
 
 ## 📜 License
